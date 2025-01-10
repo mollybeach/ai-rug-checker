@@ -1,3 +1,8 @@
+"""
+@title Model
+@fileoverview Model
+@path /src/ai/model.py
+"""
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
