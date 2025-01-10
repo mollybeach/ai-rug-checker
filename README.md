@@ -21,9 +21,6 @@ Welcome to the **AI Rug Checker**, an advanced AI-driven platform that helps inv
 ## 📂 Project Structure
 
 ```
-## Project Structure
-
-```
 ai-rug-checker/
 ├── .git/
 ├── characters/
@@ -59,10 +56,7 @@ ai-rug-checker/
 ├── pnpm-lock.yaml
 ├── README.md
 └── tsconfig.json
-
 ```
-
-
 ---
 
 ## 🛠️ Setup
