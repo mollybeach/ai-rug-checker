@@ -1,5 +1,3 @@
-# ai-rug-checker
-
 # 🚀 AI Rug Checker 🤖🔗
 
 Welcome to the **AI Rug Checker**, an advanced AI-driven platform that helps investors analyze cryptocurrency tokens, especially meme coins 🐕💰, to detect potential "rug pulls" 🛑. This project combines cutting-edge machine learning 📊, blockchain data analysis 🔗, and chatbot integration 🤝 to enhance security 🔒 in the crypto ecosystem.
