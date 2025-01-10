@@ -1,5 +1,5 @@
 {
-    "name": "ai-rug-checker",
+    "name": "rug-watch-dog",
     "version": "0.1.1",
     "main": "src/index.ts",
     "type": "module",

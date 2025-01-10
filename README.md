@@ -1,6 +1,6 @@
-# 🚀 AI Rug Checker 🤖🔗
+# 🚀 Rug Watch Dog 🤖🔗
 
-Welcome to the **AI Rug Checker**, an advanced AI-driven platform that helps investors analyze cryptocurrency tokens, especially meme coins 🐕💰, to detect potential "rug pulls" 🛑. This project combines cutting-edge machine learning 📊, blockchain data analysis 🔗, and chatbot integration 🤝 to enhance security 🔒 in the crypto ecosystem.
+Welcome to the **Rug Watch Dog**, an advanced AI-driven platform that helps investors analyze cryptocurrency tokens, especially meme coins 🐕💰, to detect potential "rug pulls" 🛑. This project combines cutting-edge machine learning 📊, blockchain data analysis 🔗, and chatbot integration 🤝 to enhance security 🔒 in the crypto ecosystem.
 
 ---
 
@@ -21,7 +21,7 @@ Welcome to the **AI Rug Checker**, an advanced AI-driven platform that helps inv
 ## 📂 Project Structure
 
 ```
-ai-rug-checker/
+rug-watch-dog/
 ├── .git/
 ├── characters/
 │   ├── eliza.character.json
@@ -63,8 +63,8 @@ ai-rug-checker/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/mollybeach/ai-rug-checker.git
-cd ai-rug-checker
+git clone https://github.com/mollybeach/rug-watch-dog.git
+cd rug-watch-dog
 ```
 
 ### Step 1: Install Dependencies
