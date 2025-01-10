@@ -1,55 +1,58 @@
-import { settings } from "@elizaos/core";
+import { Character } from "@elizaos/core";
 import readline from "readline";
+
+interface ChatMessage {
+  text: string;
+}
+
+interface ChatResponse {
+  messages: ChatMessage[];
+}
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
-rl.on("SIGINT", () => {
-  rl.close();
-  process.exit(0);
-});
-
-async function handleUserInput(input, agentId) {
+async function handleUserInput(input: string, agentId: string): Promise<void> {
   if (input.toLowerCase() === "exit") {
+    console.log("Exiting chat...");
     rl.close();
     process.exit(0);
   }
 
   try {
-    const serverPort = parseInt(settings.SERVER_PORT || "3000");
+    const response = await fetch(`http://localhost:3000/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: input,
+        agentId,
+      }),
+    });
 
-    const response = await fetch(
-      `http://localhost:${serverPort}/${agentId}/message`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: input,
-          userId: "user",
-          userName: "User",
-        }),
-      }
-    );
-
-    const data = await response.json();
-    data.forEach((message) => console.log(`${"Agent"}: ${message.text}`));
+    const data = (await response.json()) as ChatResponse;
+    data.messages.forEach((message) => console.log(`${"Agent"}: ${message.text}`));
   } catch (error) {
-    console.error("Error fetching response:", error);
+    console.error("Error sending message:", error);
   }
 }
 
-export function startChat(characters) {
-  function chat() {
-    const agentId = characters[0].name ?? "Agent";
-    rl.question("You: ", async (input) => {
-      await handleUserInput(input, agentId);
-      if (input.toLowerCase() !== "exit") {
-        chat(); // Loop back to ask another question
+export function startChat(characters: Character[]): () => void {
+  return () => {
+    console.log("Starting chat...");
+    console.log("Type 'exit' to quit");
+
+    rl.on("line", async (input) => {
+      if (characters.length === 1 && characters[0].id) {
+        await handleUserInput(input, characters[0].id);
+      } else if (characters.length === 1) {
+        console.error("Character ID is missing");
+      } else {
+        console.log("Multiple characters not supported yet");
       }
     });
-  }
-
-  return chat;
+  };
 }
