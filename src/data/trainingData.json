@@ -1,0 +1,51 @@
+[{
+        "token": "0x123456789abcdef",
+        "volumeAnomaly": 0.95,
+        "holderConcentration": 0.92,
+        "liquidityScore": 0.1,
+        "isRugPull": true,
+        "metadata": {
+            "reason": "High holder concentration, low liquidity"
+        }
+    },
+    {
+        "token": "0xabcdef123456789",
+        "volumeAnomaly": 0.15,
+        "holderConcentration": 0.35,
+        "liquidityScore": 0.85,
+        "isRugPull": false,
+        "metadata": {
+            "reason": "Well distributed, good liquidity"
+        }
+    },
+    {
+        "token": "0x111222333444555",
+        "volumeAnomaly": 0.88,
+        "holderConcentration": 0.75,
+        "liquidityScore": 0.2,
+        "isRugPull": true,
+        "metadata": {
+            "reason": "Suspicious volume spikes, concentrated holdings"
+        }
+    },
+    {
+        "token": "0x555444333222111",
+        "volumeAnomaly": 0.25,
+        "holderConcentration": 0.45,
+        "liquidityScore": 0.75,
+        "isRugPull": false,
+        "metadata": {
+            "reason": "Stable volume, good distribution"
+        }
+    },
+    {
+        "token": "0xdeadbeefcafe123",
+        "volumeAnomaly": 0.92,
+        "holderConcentration": 0.88,
+        "liquidityScore": 0.15,
+        "isRugPull": true,
+        "metadata": {
+            "reason": "Very high concentration, suspicious activity"
+        }
+    }
+]

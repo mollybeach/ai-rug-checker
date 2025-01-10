@@ -24,6 +24,7 @@ Welcome to the **Rug Watch Dog**, an advanced AI-driven platform that helps inve
 ```
 rug-watch-dog/
 ├── .git/
+├── .vscode/
 ├── assets/
 │   └── images/
 │   │   └── rug-watch-dog.png
@@ -32,9 +33,15 @@ rug-watch-dog/
 │   ├── rugwatchdog.character.json
 │   ├── tate.character.json
 │   └── trump.character.json
+├── data/
+│   └── model/
+│   │   ├── model.json
+│   │   └── weights.bin
 ├── node_modules/
 ├── scripts/
-│   └── clean.sh
+│   ├── clean.sh
+│   ├── collectData.ts
+│   └── trainModel.ts
 ├── src/
 │   ├── cache/
 │   │   └── index.ts
@@ -46,7 +53,9 @@ rug-watch-dog/
 │   │   └── index.ts
 │   ├── data/
 │   │   ├── fetcher.ts
-│   │   └── preprocess.ts
+│   │   ├── model.ts
+│   │   ├── preprocess.ts
+│   │   └── trainingData.json
 │   ├── database/
 │   │   └── index.ts
 │   ├── ml/
@@ -56,8 +65,11 @@ rug-watch-dog/
 ├── tests/
 │   └── data/
 │   │   └── fetcher.test.ts
+├── .env
+├── .env.example
 ├── .gitignore
 ├── Dockerfile
+├── jest.config.ts
 ├── LICENSE
 ├── package.json
 ├── pnpm-lock.yaml
@@ -86,26 +98,44 @@ pnpm install
 
 ### 2. Set Up Environment Variables
 
-- Copy .env.example to .env: 
+- Copy `.env.example` to `.env` and update with your actual credentials:
 
-```
+```bash
 cp .env.example .env
 ```
-Update the following:
 
-```
--DISCORD_APPLICATION_ID=
--DISCORD_API_TOKEN= # Bot token
-+DISCORD_APPLICATION_ID="000000772361146438"
-+DISCORD_API_TOKEN="OTk1MTU1NzcyMzYxMT000000.000000.00000000000000000000000000000000"
--OPENROUTER_API_KEY=
-+OPENROUTER_API_KEY="sk-xx-xx-xxx"
--TWITTER_USERNAME= # Account username
--TWITTER_PASSWORD= # Account password
--TWITTER_EMAIL= # Account email
-+TWITTER_USERNAME="username"
-+TWITTER_PASSWORD="password"
-+TWITTER_EMAIL="your@email.com"
+Required API keys:
+- Get Etherscan API key from https://etherscan.io/apis
+- Get CoinGecko API key from https://www.coingecko.com/api/pricing
+- Get DexScreener API key from https://dexscreener.com/api
+
+Update the following in your `.env` file:
+```env
+# API Keys for Data Collection
+ETHERSCAN_API_KEY=your_etherscan_key_here
+COINGECKO_API_KEY=your_coingecko_key_here
+DEX_SCREENER_API_KEY=your_dexscreener_key_here
+
+# Discord Integration
+DISCORD_APPLICATION_ID=your_discord_app_id
+DISCORD_API_TOKEN=your_discord_bot_token
+
+# OpenRouter AI
+OPENROUTER_API_KEY=your_openrouter_key
+
+# Twitter Bot Integration
+TWITTER_USERNAME=your_twitter_username
+TWITTER_PASSWORD=your_twitter_password
+TWITTER_EMAIL=your_twitter_email
+
+# Optional API Settings
+COINGECKO_API_URL=https://api.coingecko.com/api/v3
+ETHERSCAN_API_URL=https://api.etherscan.io/api
+DEX_SCREENER_API_URL=https://api.dexscreener.com/v1
+
+# Server Configuration
+PORT=3000
+NODE_ENV=development
 ```
 
 ### 3. Step 3: Edit Character Files

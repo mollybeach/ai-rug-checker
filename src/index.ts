@@ -13,21 +13,21 @@ import fs from "fs";
 import net from "net";
 import path from "path";
 import { fileURLToPath } from "url";
-import { initializeDbCache } from "./cache/index.ts";
-import { character } from "./character.ts";
-import { startChat } from "./chat/index.ts";
-import { initializeClients } from "./clients/index.ts";
+import { initializeDbCache } from "./cache/index.js";
+import { character } from "./character.js";
+import { startChat } from "./chat/index.js";
+import { initializeClients } from "./clients/index.js";
 import {
   getTokenForProvider,
   loadCharacters,
   parseArguments,
-} from "./config/index.ts";
-import { initializeDatabase } from "./database/index.ts";
-import express from "express";
-import { preprocessTokenData } from "./data/preprocess";
-import { trainModel } from "./ml/model";
+} from "./config/index.js";
+import { initializeDatabase } from "./database/index.js";
+import express, { Request, Response } from "express";
+import { preprocessTokenData } from "./data/preprocess.js";
+import { trainModel } from "./ml/model.js";
 import * as tf from "@tensorflow/tfjs-node";
-import { fetchTokenData } from "./data/fetcher";
+import { fetchTokenData } from "./data/fetcher.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,7 +78,7 @@ async function startAgent(character: Character, directClient: DirectClient) {
     character.id ??= stringToUuid(character.name);
     character.username ??= character.name;
 
-    const token = getTokenForProvider(character.modelProvider, character);
+    const token = getTokenForProvider(character.modelProvider, character) || '';
     const dataDir = path.join(__dirname, "../data");
 
     if (!fs.existsSync(dataDir)) {
@@ -182,12 +182,15 @@ startAgents().catch((error) => {
 const app = express();
 app.use(express.json());
 
-app.post("/analyze", async (req, res) => {
+app.post("/analyze", async (req: Request, res: Response) => {
   const tokenAddress = req.body.tokenAddress;
   const tokenData = await fetchTokenData(tokenAddress);
   const processedData = await preprocessTokenData(tokenData);
-  const model = trainModel([]);
-  const prediction = model.predict(tf.tensor2d([Object.values(processedData)], [1, 3]));
+  const model = await trainModel([
+    { volumeAnomaly: 0.75, holderConcentration: 0.9, liquidityScore: 0.3, isRugPull: true },
+    { volumeAnomaly: 0.2, holderConcentration: 0.4, liquidityScore: 0.8, isRugPull: false }
+  ]);
+  const prediction = await model.predict(tf.tensor2d([Object.values(processedData)], [1, 3]));
   res.json({ riskScore: (prediction as tf.Tensor).dataSync() });
 });
 

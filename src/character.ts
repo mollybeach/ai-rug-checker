@@ -1,7 +1,7 @@
 import { Character, defaultCharacter } from "@elizaos/core";
 
-import { preprocessTokenData } from "./data/preprocess";
-import { fetchTokenData } from "./data/fetcher";
+import { preprocessTokenData } from './data/preprocess.js';
+import { fetchTokenData } from './data/fetcher.js';
 
 export async function analyzeTokenWithEliza(tokenAddress: string) {
     const tokenData = await fetchTokenData(tokenAddress);
