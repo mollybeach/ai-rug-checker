@@ -187,10 +187,26 @@ app.post("/analyze", async (req: Request, res: Response) => {
   const tokenData = await fetchTokenData(tokenAddress);
   const processedData = await preprocessTokenData(tokenData);
   const model = await trainModel([
-    { volumeAnomaly: 0.75, holderConcentration: 0.9, liquidityScore: 0.3, isRugPull: true },
-    { volumeAnomaly: 0.2, holderConcentration: 0.4, liquidityScore: 0.8, isRugPull: false }
+    { 
+      volumeAnomaly: 0.75, 
+      holderConcentration: 0.9, 
+      liquidityScore: 0.3,
+      priceVolatility: 0.6,
+      sellPressure: 0.8,
+      marketCapRisk: 0.7, 
+      isRugPull: true 
+    },
+    { 
+      volumeAnomaly: 0.2,
+      holderConcentration: 0.4,
+      liquidityScore: 0.8,
+      priceVolatility: 0.3,
+      sellPressure: 0.2,
+      marketCapRisk: 0.4,
+      isRugPull: false
+    }
   ]);
-  const prediction = await model.predict(tf.tensor2d([Object.values(processedData)], [1, 3]));
+  const prediction = await model.predict(tf.tensor2d([Object.values(processedData)], [1, 6]));
   res.json({ riskScore: (prediction as tf.Tensor).dataSync() });
 });
 

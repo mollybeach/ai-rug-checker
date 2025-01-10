@@ -106,15 +106,13 @@ cp .env.example .env
 
 Required API keys:
 - Get Etherscan API key from https://etherscan.io/apis
-- Get CoinGecko API key from https://www.coingecko.com/api/pricing
-- Get DexScreener API key from https://dexscreener.com/api
+
+Note: DexScreener API doesn't require an API key but has rate limits (300 requests/minute for most endpoints).
 
 Update the following in your `.env` file:
 ```env
 # API Keys for Data Collection
-ETHERSCAN_API_KEY=your_etherscan_key_here
-COINGECKO_API_KEY=your_coingecko_key_here
-DEX_SCREENER_API_KEY=your_dexscreener_key_here
+ETHERSCAN_API_KEY=your_etherscan_api_key_here
 
 # Discord Integration
 DISCORD_APPLICATION_ID=your_discord_app_id
@@ -131,7 +129,7 @@ TWITTER_EMAIL=your_twitter_email
 # Optional API Settings
 COINGECKO_API_URL=https://api.coingecko.com/api/v3
 ETHERSCAN_API_URL=https://api.etherscan.io/api
-DEX_SCREENER_API_URL=https://api.dexscreener.com/v1
+DEX_SCREENER_API_URL=https://api.dexscreener.com/latest/dex
 
 # Server Configuration
 PORT=3000

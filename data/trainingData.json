@@ -1,0 +1,47 @@
+[
+  {
+    "volumeAnomaly": 1,
+    "holderConcentration": 1,
+    "liquidityScore": 1,
+    "priceVolatility": 0,
+    "sellPressure": 0,
+    "marketCapRisk": 1,
+    "isRugPull": true
+  },
+  {
+    "volumeAnomaly": 1,
+    "holderConcentration": 1,
+    "liquidityScore": 1,
+    "priceVolatility": 0,
+    "sellPressure": 0,
+    "marketCapRisk": 1,
+    "isRugPull": true
+  },
+  {
+    "volumeAnomaly": 0,
+    "holderConcentration": 1,
+    "liquidityScore": 0,
+    "priceVolatility": 0,
+    "sellPressure": 0,
+    "marketCapRisk": 0,
+    "isRugPull": false
+  },
+  {
+    "volumeAnomaly": 0,
+    "holderConcentration": 1,
+    "liquidityScore": 0,
+    "priceVolatility": 0,
+    "sellPressure": 0,
+    "marketCapRisk": 0,
+    "isRugPull": false
+  },
+  {
+    "volumeAnomaly": 0,
+    "holderConcentration": 1,
+    "liquidityScore": 0,
+    "priceVolatility": 0,
+    "sellPressure": 1,
+    "marketCapRisk": 0,
+    "isRugPull": false
+  }
+]

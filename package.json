@@ -7,6 +7,7 @@
         "build": "tsc && tsup src/index.ts --format esm --dts",
         "start": "node --loader ts-node/esm src/index.ts",
         "train": "node --loader ts-node/esm scripts/trainModel.ts",
+        "collect-data": "node --loader ts-node/esm scripts/collectData.ts",
         "test": "jest --passWithNoTests",
         "dev": "nodemon --watch src --ext ts,json --exec 'node --loader ts-node/esm src/index.ts'",
         "clean": "rm -rf dist && rm -rf node_modules"
