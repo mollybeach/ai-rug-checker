@@ -1,8 +1,7 @@
 # 🐕 Rug Watch Dog 🤖🔗
 
 Welcome to the **Rug Watch Dog**, an advanced AI-driven platform that helps investors analyze cryptocurrency tokens, especially meme coins 🐕💰, to detect potential "rug pulls" 🛑. This project combines cutting-edge machine learning 📊, blockchain data analysis 🔗, and chatbot integration 🤝 to enhance security 🔒 in the crypto ecosystem.
-
-![Rug Watch Dog](https://github.com/mollybeach/rug-watch-dog/blob/main/assets/rug-watch-dog.png)
+![Rug Watch Dog](./assets/images/rug-watch-dog.png)
 
 ---
 
