@@ -23,6 +23,11 @@ import {
   parseArguments,
 } from "./config/index.ts";
 import { initializeDatabase } from "./database/index.ts";
+import express from "express";
+import { preprocessTokenData } from "./data/preprocess";
+import { trainModel } from "./ml/model";
+import * as tf from "@tensorflow/tfjs-node";
+import { fetchTokenData } from "./data/fetcher";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -173,3 +178,17 @@ startAgents().catch((error) => {
   elizaLogger.error("Unhandled error in startAgents:", error);
   process.exit(1);
 });
+
+const app = express();
+app.use(express.json());
+
+app.post("/analyze", async (req, res) => {
+  const tokenAddress = req.body.tokenAddress;
+  const tokenData = await fetchTokenData(tokenAddress);
+  const processedData = await preprocessTokenData(tokenData);
+  const model = trainModel([]);
+  const prediction = model.predict(tf.tensor2d([Object.values(processedData)], [1, 3]));
+  res.json({ riskScore: (prediction as tf.Tensor).dataSync() });
+});
+
+app.listen(3000, () => console.log("Server running on port 3000"));

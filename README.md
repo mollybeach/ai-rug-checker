@@ -24,15 +24,14 @@ Welcome to the **Rug Watch Dog**, an advanced AI-driven platform that helps inve
 ```
 rug-watch-dog/
 ├── .git/
+├── assets/
+│   └── images/
+│   │   └── rug-watch-dog.png
 ├── characters/
 │   ├── eliza.character.json
 │   ├── rugwatchdog.character.json
 │   ├── tate.character.json
 │   └── trump.character.json
-├── content_cache/
-├── data/
-│   └── db.sqlite
-├── dist/
 ├── node_modules/
 ├── scripts/
 │   └── clean.sh
@@ -45,11 +44,18 @@ rug-watch-dog/
 │   │   └── index.ts
 │   ├── config/
 │   │   └── index.ts
+│   ├── data/
+│   │   ├── fetcher.ts
+│   │   └── preprocess.ts
 │   ├── database/
 │   │   └── index.ts
+│   ├── ml/
+│   │   └── model.ts
 │   ├── character.ts
 │   └── index.ts
-├── .DS_Store
+├── tests/
+│   └── data/
+│   │   └── fetcher.test.ts
 ├── .gitignore
 ├── Dockerfile
 ├── LICENSE

@@ -1,5 +1,14 @@
 import { Character, defaultCharacter } from "@elizaos/core";
 
+import { preprocessTokenData } from "./data/preprocess";
+import { fetchTokenData } from "./data/fetcher";
+
+export async function analyzeTokenWithEliza(tokenAddress: string) {
+    const tokenData = await fetchTokenData(tokenAddress);
+    const processedData = await preprocessTokenData(tokenData);
+    return `🐕 Analysis Complete: Volume Anomaly: ${processedData.volumeAnomaly}, Holder Concentration: ${processedData.holderConcentration}, Liquidity Score: ${processedData.liquidityScore}`;
+}
+
 export const character: Character = {
     ...defaultCharacter,
     // name: "Eliza",
