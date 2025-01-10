@@ -1,0 +1,1 @@
+# ai-rug-checker
