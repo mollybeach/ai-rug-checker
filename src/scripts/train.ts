@@ -1,4 +1,4 @@
-import { collectTrainingData } from '../data-harvesting/collector';
+import { collectTrainingData } from '../data-harvesting/collector.ts';
 import { trainModel } from '../training/modelTrainer';
 import path from 'path';
 import fs from 'fs/promises';

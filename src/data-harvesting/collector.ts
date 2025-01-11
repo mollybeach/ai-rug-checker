@@ -1,11 +1,11 @@
+// path: src/data-harvesting/collector.ts
 import { ethers } from 'ethers';
 import { fetchTokenData } from './fetcher';
-import { normalizeFeatures } from '../data-processing/parser';
 import { TokenData } from '../types/data';
 import fs from 'fs/promises';
 import path from 'path';
 
-const ETHEREUM_RPC = process.env.ETHEREUM_RPC || 'https://eth-mainnet.g.alchemy.com/v2/your-api-key';
+const ETHEREUM_RPC = process.env.ETHEREUM_RPC || 'https://eth-mainnet.g.alchemy.com/v2/'+process.env.ALCHEMY_API_KEY;
 const OUTPUT_FILE = path.join(process.cwd(), 'src/ml/models/datasets/training.json');
 
 export async function loadExistingData(): Promise<TokenData[]> {

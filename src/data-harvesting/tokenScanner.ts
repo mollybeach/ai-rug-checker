@@ -1,9 +1,10 @@
+// path: src/data-harvesting/tokenScanner.ts
 import { ethers } from 'ethers';
 import { fetchTokenData } from './fetcher';
 import { appendTokenData } from '../data-processing/storage';
 
 const RPC_ENDPOINTS = {
-    ethereum: process.env.ETHEREUM_RPC || 'https://eth-mainnet.g.alchemy.com/v2/your-api-key',
+    ethereum: process.env.ETHEREUM_RPC || 'https://eth-mainnet.g.alchemy.com/v2/'+process.env.ALCHEMY_API_KEY,
     bsc: process.env.BSC_RPC || 'https://bsc-dataseed.binance.org',
     polygon: process.env.POLYGON_RPC || 'https://polygon-rpc.com'
 };
