@@ -5,6 +5,7 @@ import tokensRouter from './routes/tokens';
 import metricsRouter from './routes/metrics';
 import * as tf from '@tensorflow/tfjs-node';
 import path from 'path';
+import trainingRoutes from './routes/training';
 
 const app = express();
 let model: tf.LayersModel | null = null;
@@ -27,6 +28,7 @@ app.use(express.json());
 // Routes
 app.use('/tokens', tokensRouter);
 app.use('/metrics', metricsRouter);
+app.use('/api/training', trainingRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
