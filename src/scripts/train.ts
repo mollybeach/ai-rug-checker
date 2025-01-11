@@ -1,4 +1,4 @@
-import { collectTrainingData } from '../data-harvesting/collector.ts';
+import { collectTrainingData } from '../data-harvesting/collector';
 import { trainModel } from '../training/modelTrainer';
 import path from 'path';
 import fs from 'fs/promises';
@@ -11,7 +11,7 @@ async function main() {
         
         // Step 2: Train the model
         console.log('\nStarting model training process...');
-        const trainingDataPath = path.join(process.cwd(), 'src/ml/models/datasets/training.json');
+        const trainingDataPath = path.join(process.cwd(), 'src/models/datasets/training.json');
         const trainingData = JSON.parse(await fs.readFile(trainingDataPath, 'utf-8'));
         await trainModel(trainingData);
         

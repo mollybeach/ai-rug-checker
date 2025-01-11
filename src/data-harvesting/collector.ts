@@ -5,6 +5,11 @@ import { TokenData } from '../types/data';
 import fs from 'fs/promises';
 import path from 'path';
 
+// Configuration
+const TARGET_TOKENS = 1; // 🎯 Target number of tokens to collect
+const BLOCKS_TO_SCAN = 2; // 📦 Number of blocks to scan
+const TXS_PER_BLOCK = 5; // 📝 Number of transactions to check per block
+const BLOCK_SKIP = 500; // ⏭️  Number of blocks to skip each time
 const OUTPUT_DIR = path.join(process.cwd(), 'src', 'ml', 'models', 'datasets');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'training.json');
 
@@ -12,6 +17,69 @@ const RPC_ENDPOINTS = {
     ethereum: process.env.ETHEREUM_RPC || 'https://eth-mainnet.g.alchemy.com/v2/'+process.env.ALCHEMY_API_KEY,
     bsc: process.env.BSC_RPC || 'https://bsc-dataseed1.binance.org',
     polygon: process.env.POLYGON_RPC || 'https://polygon-mainnet.g.alchemy.com/v2/'+process.env.ALCHEMY_API_KEY
+};
+
+// Add rate limiting helpers at the top of the file
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Rate limiting helper
+class RateLimit {
+    private queue: Array<() => Promise<any>> = [];
+    private processing = false;
+    
+    constructor(private requestsPerSecond: number) {}
+    
+    async add<T>(fn: () => Promise<T>): Promise<T> {
+        return new Promise((resolve, reject) => {
+            this.queue.push(async () => {
+                try {
+                    const result = await fn();
+                    resolve(result);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+            
+            if (!this.processing) {
+                this.process();
+            }
+        });
+    }
+    
+    private async process() {
+        this.processing = true;
+        while (this.queue.length > 0) {
+            const batch = this.queue.splice(0, this.requestsPerSecond);
+            await Promise.all(batch.map(fn => fn()));
+            await sleep(1000); // Wait 1 second between batches
+        }
+        this.processing = false;
+    }
+}
+
+// Retry helper
+async function withRetry<T>(
+    fn: () => Promise<T>,
+    retries = 3,
+    delay = 1000
+): Promise<T> {
+    try {
+        return await fn();
+    } catch (error: any) {
+        if (retries === 0 || (error?.error?.code !== 429 && error?.code !== 'UNKNOWN_ERROR')) {
+            throw error;
+        }
+        console.log(`⏳ Rate limited, retrying in ${delay/1000}s...`);
+        await sleep(delay);
+        return withRetry(fn, retries - 1, delay * 2);
+    }
+}
+
+// Create rate limiters for different chains
+const rateLimiters = {
+    ethereum: new RateLimit(5), // 5 requests per second for Alchemy
+    bsc: new RateLimit(10),     // 10 for BSC
+    polygon: new RateLimit(5)   // 5 for Polygon
 };
 
 // Helper function to ensure directory exists
@@ -102,17 +170,24 @@ function progressBar(current: number, total: number, length: number = 20): strin
     return `[${bar}] ${current}/${total}`;
 }
 
-async function collectTrainingData(numTokens: number = 1000) {
+// Add timeout helper
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> => {
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
+    const result = await Promise.race([promise, timeout]);
+    return result;
+};
+
+async function collectTrainingData(numTokens: number = TARGET_TOKENS) {
     const startTime = Date.now();
     let trainingData: TokenData[] = await loadProgress();
-    const chains = ['ethereum', 'bsc', 'polygon'] as const;
+    const chains = ['ethereum'] as const;
     const remainingTokens = numTokens - trainingData.length;
     const tokensPerChain = Math.ceil(remainingTokens / chains.length);
     
     console.log('\n🚀 Initializing Training Data Collection');
     console.log('----------------------------------------');
-    console.log(`🎯 Target: ${numTokens} tokens (${tokensPerChain} per chain)`);
-    console.log(`📊 Chains: ${chains.join(', ')}`);
+    console.log(`🎯 Target: ${numTokens} tokens`);
+    console.log(`📊 Chain: ${chains.join(', ')}`);
     console.log(`📈 Progress: ${trainingData.length} tokens already collected`);
     console.log('----------------------------------------\n');
     
@@ -126,72 +201,42 @@ async function collectTrainingData(numTokens: number = 1000) {
             const latestBlock = await provider.getBlockNumber();
             console.log(`📡 Connected to ${chain} network`);
             console.log(`📦 Latest block: ${latestBlock}`);
+            console.log(`🔍 Will scan ${BLOCKS_TO_SCAN} blocks`);
+            console.log(`📝 Checking ${TXS_PER_BLOCK} transactions per block`);
             let processedBlocks = 0;
-            let processedTxs = 0;
-            let foundContracts = 0;
             
-            for (let i = 0; i < tokensPerChain && trainingData.length < numTokens; i++) {
-                const blockStartTime = Date.now();
-                try {
-                    const blockNumber = latestBlock - (i * 100);
-                    processedBlocks++;
+            for (let i = 0; i < BLOCKS_TO_SCAN && trainingData.length < numTokens; i++) {
+                const blockNumber = latestBlock - (i * BLOCK_SKIP);
+                const result = await processBlock(blockNumber, chain, provider);
+                
+                if (!result) continue;
+                processedBlocks++;
+                
+                // Process found contracts
+                for (const contract of result.contracts) {
+                    console.log(`\n🔎 Contract found: ${contract}`);
+                    const tokenData = await fetchTokenData(contract, chain);
                     
-                    const block = await provider.getBlock(blockNumber);
-                    if (!block || !block.transactions) {
-                        console.log(`⚠️  Block ${blockNumber}: No transactions`);
-                        continue;
-                    }
-                    
-                    processedTxs += block.transactions.length;
-                    console.log(`\n📍 Block ${blockNumber} [${block.transactions.length} txs]`);
-                    
-                    for (const txHash of block.transactions) {
-                        const tx = await provider.getTransaction(txHash);
-                        if (!tx || tx.to) continue;
+                    if (tokenData) {
+                        trainingData.push(tokenData);
+                        await appendToken(tokenData);
+                        console.log(`✅ Valid token collected: ${contract}`);
+                        console.log(`📊 Progress: ${progressBar(trainingData.length, numTokens)}`);
                         
-                        const receipt = await provider.getTransactionReceipt(txHash);
-                        if (!receipt || !receipt.contractAddress) continue;
-                        
-                        foundContracts++;
-                        console.log(`\n🔎 Contract found: ${receipt.contractAddress}`);
-                        const tokenData = await fetchTokenData(receipt.contractAddress, chain);
-                        
-                        if (tokenData) {
-                            trainingData.push(tokenData);
-                            // Save each token immediately
-                            await appendToken(tokenData);
-                            
-                            const elapsedTime = formatDuration(Date.now() - startTime);
-                            console.log(`✅ Valid token collected: ${receipt.contractAddress}`);
-                            console.log(`⏱️  Time elapsed: ${elapsedTime}`);
-                            console.log(`📊 Progress: ${progressBar(trainingData.length, numTokens)}`);
-                            console.log(`📈 Stats for ${chain}:`);
-                            console.log(`   Blocks: ${processedBlocks}`);
-                            console.log(`   Transactions: ${processedTxs}`);
-                            console.log(`   Contracts found: ${foundContracts}`);
-                            console.log(`   Success rate: ${((trainingData.length / foundContracts) * 100).toFixed(1)}%`);
-                        } else {
-                            console.log(`❌ Invalid token or failed to fetch data`);
+                        if (trainingData.length >= numTokens) {
+                            console.log('\n🎯 Target reached!');
+                            break;
                         }
                     }
-                    
-                    if (processedBlocks % 10 === 0) {
-                        const blockTime = formatDuration(Date.now() - blockStartTime);
-                        console.log(`\n⏳ Block scan completed in ${blockTime}`);
-                        console.log(`🔍 Processed ${processedBlocks}/${tokensPerChain} blocks`);
-                    }
-                } catch (error) {
-                    console.error(`❌ Block error:`, error);
-                    continue;
                 }
+                
+                await sleep(500); // Reduced delay between blocks
             }
             
             const chainTime = formatDuration(Date.now() - chainStartTime);
             console.log(`\n✨ ${chain.toUpperCase()} scan completed in ${chainTime}`);
-            console.log(`📊 Final chain stats:`);
+            console.log(`📊 Final stats:`);
             console.log(`   Blocks scanned: ${processedBlocks}`);
-            console.log(`   Transactions processed: ${processedTxs}`);
-            console.log(`   Contracts found: ${foundContracts}`);
             console.log(`   Tokens collected: ${trainingData.length}`);
             
         } catch (error) {
@@ -207,6 +252,69 @@ async function collectTrainingData(numTokens: number = 1000) {
     console.log(`⏱️  Total time: ${totalTime}`);
     console.log(`💾 Data saved to: ${OUTPUT_FILE}`);
     console.log('----------------------------------------\n');
+    
+    return trainingData;
+}
+
+// Helper function to process a single block
+async function processBlock(blockNumber: number, chain: string, provider: ethers.JsonRpcProvider) {
+    try {
+        // Get block with retry, rate limiting, and timeout
+        const block = await withTimeout(
+            rateLimiters[chain as keyof typeof rateLimiters].add(() =>
+                withRetry(() => provider.getBlock(blockNumber))
+            ),
+            5000 // 5 second timeout
+        );
+
+        if (!block || !block.transactions) {
+            console.log(`⚠️  Block ${blockNumber}: No transactions or timeout`);
+            return null;
+        }
+        
+        console.log(`\n📍 Block ${blockNumber} [${block.transactions.length} txs]`);
+        
+        // Use configured number of transactions
+        const transactions = block.transactions.slice(0, TXS_PER_BLOCK);
+        const contracts: string[] = [];
+        const BATCH_SIZE = 5;
+        
+        for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
+            const batch = transactions.slice(i, i + BATCH_SIZE);
+            const txPromises = batch.map(txHash => 
+                withTimeout(
+                    rateLimiters[chain as keyof typeof rateLimiters].add(() =>
+                        withRetry(async () => {
+                            const tx = await provider.getTransaction(txHash);
+                            if (!tx || tx.to) return null;
+                            const receipt = await provider.getTransactionReceipt(txHash);
+                            return receipt?.contractAddress || null;
+                        })
+                    ),
+                    3000 // 3 second timeout per transaction
+                )
+            );
+            
+            const results = await Promise.all(txPromises);
+            contracts.push(...results.filter((addr): addr is string => !!addr));
+            
+            // Exit early if we found any contracts
+            if (contracts.length > 0) {
+                console.log(`🎯 Found ${contracts.length} contracts, moving to next block`);
+                break;
+            }
+            
+            await sleep(200);
+        }
+        
+        return {
+            txCount: transactions.length,
+            contracts
+        };
+    } catch (error) {
+        console.error(`❌ Block error:`, error);
+        return null;
+    }
 }
 
 // Export for use in training script
