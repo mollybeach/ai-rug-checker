@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import config from '../../config/default';
 
 export interface AuthenticatedRequest extends Request {
     apiKey?: string;
