@@ -114,36 +114,13 @@ For more details on each step, see the documentation below.
 - `datasets/`: Training datasets
 - `trained/`: Trained model files
 
----
-
-## 🔧 Technical Components
-
-### 1. Data Collection Layer
-- `src/data-harvesting/fetcher.ts`: Handles API calls to Etherscan and DexScreener
-- `src/data-harvesting/collector.ts`: Manages training data collection
-- `src/data-harvesting/scanner.ts`: Orchestrates token analysis process
-
-### 2. Data Processing Layer
-- `src/data-processing/preprocess.ts`: Normalizes and transforms raw data
-- `src/data-processing/storage.ts`: Manages data persistence and retrieval
-- `src/data-processing/types.ts`: Defines data structures and interfaces
-
-### 3. Machine Learning Layer
-- `src/training/model.ts`: Core ML model implementation
-- `src/training/train.ts`: Model training and validation
-- `data/trainingData.json`: Curated dataset for training
-
-### 4. Integration Layer
+### 9. Integration Layer
 - `src/chat/index.ts`: Chat interface implementation
 - `src/clients/index.ts`: Social media client integrations
 - `src/cache/index.ts`: Performance optimization
-
-### 5. Configuration Layer
-- `src/character.ts`: AI personality settings
-- `src/config/index.ts`: Application configuration
-- `src/database/index.ts`: Database connection management
-
 ---
+
+
 
 ## �� Project Structure
 
@@ -193,8 +170,8 @@ rug-watch-dog/
 │   │   ├── datasets/
 │   │   │   └── training.json
 │   │   └── trained/
-│   │   │   ├── model.json
-│   │   │   └── weights.bin
+│   │       ├── model.json
+│   │       └── weights.bin
 │   ├── monitor/
 │   │   └── collector.ts
 │   ├── scripts/
@@ -204,11 +181,11 @@ rug-watch-dog/
 │   ├── tests/
 │   │   ├── api/
 │   │   │   └── routes/
-│   │   │   │   └── tokens.test.ts
+│   │   │         └── tokens.test.ts
 │   │   ├── db/
 │   │   └── services/
-│   │   │   └── ml/
-│   │   │   │   └── predictor.test.ts
+│   │       └── ml/
+│   │             └── predictor.test.ts
 │   ├── training/
 │   │   ├── modelEvaluator.ts
 │   │   ├── modelPredictor.ts
