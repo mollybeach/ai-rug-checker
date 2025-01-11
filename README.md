@@ -208,24 +208,6 @@ rug-watch-dog/
 ├── README.md
 └── tsconfig.json
 ```
-
-Key Changes:
-1. Renamed `/data` to `/models` with subdirectories for trained models and datasets
-2. Reorganized `/src` into logical groups:
-   - `api/`: All API-related code
-   - `services/`: Core business logic
-   - `types/`: TypeScript definitions
-   - `utils/`: Helper functions
-3. Moved data processing code to `services/data/`
-4. Grouped ML-related code under `services/ml/`
-5. Consolidated integrations under `services/integrations/`
-
-This structure provides:
-- Clear separation between models/data and source code
-- Logical grouping of related functionality
-- Better scalability for future features
-- More intuitive navigation
-
 ---
 
 ## 🛠️ Setup
@@ -340,6 +322,7 @@ curl -X POST http://localhost:3000/analyze \
 2. Train with new data:
 ```bash
 pnpm collect-data
+pnpm train
 ```
 
 ## 📜 License
