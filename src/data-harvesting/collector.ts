@@ -6,9 +6,9 @@ import fs from 'fs/promises';
 import path from 'path';
 
 // Configuration
-const TARGET_TOKENS = 1; // 🎯 Target number of tokens to collect
-const BLOCKS_TO_SCAN = 50; // 📦 Number of blocks to scan
-const TXS_PER_BLOCK = 20; // 📝 Number of transactions to check per block
+const TARGET_TOKENS = 100; // 🎯 Target number of tokens to collect
+const BLOCKS_TO_SCAN = 5; // 📦 Number of blocks to scan
+const TXS_PER_BLOCK = 100; // 📝 Number of transactions to check per block
 const BLOCK_SKIP = 100; // ⏭️  Number of blocks to skip each time
 const OUTPUT_DIR = path.join(process.cwd(), 'src', 'ml', 'models', 'datasets');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'training.json');
@@ -281,12 +281,21 @@ async function processBlock(blockNumber: number, chain: string, provider: ethers
         const BATCH_SIZE = 5;
         
         for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
+            console.log(`Processing batch ${i / BATCH_SIZE + 1} of ${Math.ceil(transactions.length / BATCH_SIZE)}`);
             const batch = transactions.slice(i, i + BATCH_SIZE);
             const txPromises = batch.map(txHash => 
                 withTimeout(
                     rateLimiters[chain as keyof typeof rateLimiters].add(() =>
                         withRetry(async () => {
                             const tx = await provider.getTransaction(txHash);
+                            const shortHash = txHash.slice(0, 8) + '...';
+                            const scannerUrl = chain === 'bsc' 
+                                ? `https://bscscan.com/tx/${txHash}`
+                                : chain === 'polygon'
+                                ? `https://polygonscan.com/tx/${txHash}`
+                                : `https://etherscan.io/tx/${txHash}`;
+                            // Use ANSI escape codes to create a clickable link
+                            console.log(`🧾 Tx: \x1b]8;;${scannerUrl}\x07${shortHash}\x1b]8;;\x07`);
                             if (!tx || tx.to) return null;
                             const receipt = await provider.getTransactionReceipt(txHash);
                             return receipt?.contractAddress || null;

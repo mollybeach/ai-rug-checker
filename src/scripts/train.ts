@@ -1,7 +1,5 @@
 import { collectTrainingData } from '../data-harvesting/collector';
 import { trainModel } from '../training/modelTrainer';
-import path from 'path';
-import fs from 'fs/promises';
 
 async function main() {
     try {

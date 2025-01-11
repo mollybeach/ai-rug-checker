@@ -82,10 +82,17 @@ async function fetchEtherscanData(tokenAddress: string, chain: string = 'ethereu
         });
         
         if (response.data?.status === '1' && Array.isArray(response.data.result)) {
+            console.log(`✅ Found ${response.data.result.length} transactions`);
             return response.data as EtherscanData;
         }
         
-        console.log(`❌ Invalid response from ${chain}scan:`, response.data?.message || 'Unknown error');
+        console.log(`❌ Invalid response from ${chain}scan:`, 
+            response.data?.message || 
+            (response.data?.result === null ? 'No transactions found' : 
+             response.data?.status === '0' ? 'API request failed' : 
+             'Unknown error')
+        );
+        console.log('🔍 Response details:', JSON.stringify(response.data, null, 2));
         return null;
     } catch (error: unknown) {
         console.error(`Error fetching ${chain}scan data:`, error instanceof Error ? error.message : 'Unknown error');
