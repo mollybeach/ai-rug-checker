@@ -1,9 +1,9 @@
 import express, { Request, Response, RequestHandler } from 'express';
 import * as tf from '@tensorflow/tfjs-node';
-import { fetchTokenData } from './data/fetcher.js';
-import { normalizeFeatures } from './data/preprocess.js';
-import { loadExistingData } from './data/storage.js';
-import { TokenData, TokenMetrics } from './data/types.js';
+import { fetchTokenData } from './data-harvesting/fetcher';
+import { normalizeFeatures } from './data-processing/parser';
+import { loadExistingData } from './data-harvesting/collector';
+import { TokenMetrics } from './types/data';
 
 const app = express();
 app.use(express.json());
@@ -136,4 +136,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
     await loadModel();
     console.log(`Server running on port ${PORT}`);
-});
+}); 

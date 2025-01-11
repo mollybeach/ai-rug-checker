@@ -16,26 +16,46 @@ Check out the live demo: [RugWatchDog](https://rugwatchdog.vercel.app/)
 ## 🔄 Application Flow
 
 ```
-User Input (Token Address)
-         ↓
-    Data Collection
-    /            \
-Etherscan     DexScreener
-    \            /
-    Data Processing
-         ↓
-  Calculate Metrics
-         ↓
-   AI Risk Analysis
-         ↓
-  Risk Assessment
-     /        \
-High Risk    Low Risk
-   ↓            ↓
-FUD Alert    Store Data
-   ↓            ↓
-Social      Training
-Media       Dataset
+User Request
+    │
+    ▼
+API Layer (src/api/)
+    │
+    ▼
+Data Collection Layer
+    │
+    ├─► Etherscan API
+    │   (src/data-harvesting/fetcher.ts)
+    │
+    └─► DexScreener API
+        (src/data-harvesting/fetcher.ts)
+    │
+    ▼
+Data Processing
+    │
+    ├─► Token Metrics
+    │   (src/data-processing/metrics.ts)
+    │
+    └─► Data Storage
+        (src/data-processing/storage.ts)
+    │
+    ▼
+ML Analysis
+    │
+    ├─► Model Prediction
+    │   (src/training/predictor.ts)
+    │
+    └─► Risk Evaluation
+        (src/training/evaluator.ts)
+    │
+    ▼
+Response/Alerts
+    │
+    ├─► API Response
+    │   (src/api/routes/)
+    │
+    └─► Social Integrations
+        (src/integrations/)
 ```
 
 ### Process Explanation:
@@ -51,46 +71,48 @@ For more details on each step, see the documentation below.
 
 ## 🔧 Technical Architecture
 
-```
-User Request → [src/index.ts + src/scan.ts]
-                         ↓
-Data Collection → [src/data/fetcher.ts]
-    │                    ↓
-    └→ Etherscan    Process Data
-    └→ DexScreener  [src/data/preprocess.ts]
-                         ↓
-                   ML Analysis
-                   [src/ml/model.ts]
-                         ↓
-                   Generate Alerts
-                   [src/clients/index.ts]
-```
+### 1. API Layer (`src/api/`)
+- `routes/`: API endpoint handlers
+  - `analyze.ts`: Token analysis endpoints
+  - `metrics.ts`: Metrics retrieval
+  - `tokens.ts`: Token management
+- `middleware/`: Request processing
+  - `auth.ts`: Authentication handling
 
-### Key Components:
+### 2. Data Collection (`src/data-harvesting/`)
+- `fetcher.ts`: External API integrations
+- `collector.ts`: Data collection orchestration
+- `scan-chain.ts`: Blockchain scanning
+- `scan-token.ts`: Token-specific scanning
 
-1. **Entry Points**
-   - `src/index.ts`: Express server setup
-   - `src/scan.ts`: API route handlers
+### 3. Data Processing (`src/data-processing/`)
+- `metrics.ts`: Token metrics calculation
+- `parser.ts`: Raw data parsing
+- `storage.ts`: Data persistence layer
 
-2. **Data Layer**
-   - `src/data/fetcher.ts`: External API integration
-   - `src/data/collector.ts`: Data collection
-   - `src/data/scanner.ts`: Analysis orchestration
+### 4. Machine Learning (`src/training/`)
+- `modelPredictor.ts`: Risk prediction logic
+- `modelEvaluator.ts`: Model evaluation
+- `modelTrainer.ts`: Model training pipeline
 
-3. **Processing Layer**
-   - `src/data/preprocess.ts`: Data normalization
-   - `src/data/storage.ts`: Data persistence
-   - `src/data/types.ts`: Type definitions
+### 5. Database Layer (`src/db/`)
+- `models/`: Database schemas
+- `migrations/`: Database migrations
+- `connection.ts`: Database configuration
 
-4. **ML Layer**
-   - `src/ml/model.ts`: TensorFlow.js model
-   - `src/training/train.ts`: Model training
-   - `data/trainingData.json`: Training dataset
+### 6. Monitoring & Scripts (`src/scripts/`)
+- `collect-data.ts`: Training data collection
+- `clean-db.ts`: Database maintenance
+- `train.ts`: Model training execution
 
-5. **Integration Layer**
-   - `src/chat/index.ts`: Chat interface
-   - `src/clients/index.ts`: Social media
-   - `src/cache/index.ts`: Caching logic
+### 7. Types & Utils (`src/types/`, `src/utils/`)
+- `api.ts`: API interfaces
+- `data.ts`: Data structure types
+- `utils.ts`: Helper functions
+
+### 8. Model Storage (`/models/`)
+- `datasets/`: Training datasets
+- `trained/`: Trained model files
 
 ---
 
@@ -123,7 +145,8 @@ Data Collection → [src/data/fetcher.ts]
 
 ---
 
-## 📂 Project Structure
+## �� Project Structure
+
 ```
 rug-watch-dog/
 ├── .git/
@@ -131,55 +154,71 @@ rug-watch-dog/
 ├── assets/
 │   └── images/
 │   │   └── rug-watch-dog.png
-├── characters/
-│   ├── eliza.character.json
-│   ├── rugwatchdog.character.json
-│   ├── tate.character.json
-│   └── trump.character.json
-├── data/
-│   ├── model/
-│   │   ├── model.json
-│   │   └── weights.bin
-│   └── trainingData.json
 ├── dist/
 ├── node_modules/
-├── scripts/
-│   ├── clean.sh
-│   ├── collectData.ts
-│   └── trainModel.ts
 ├── src/
-│   ├── cache/
-│   │   └── index.ts
-│   ├── chat/
-│   │   └── index.ts
-│   ├── clients/
-│   │   └── index.ts
+│   ├── agents/
+│   │   ├── eliza.character.json
+│   │   ├── rugwatchdog.character.json
+│   │   ├── tate.character.json
+│   │   └── trump.character.json
+│   ├── api/
+│   │   ├── middleware/
+│   │   │   └── auth.ts
+│   │   ├── routes/
+│   │   │   ├── analyze.ts
+│   │   │   ├── metrics.ts
+│   │   │   └── tokens.ts
+│   │   └── server.ts
 │   ├── config/
+│   │   ├── default.ts
 │   │   └── index.ts
-│   ├── data/
+│   ├── data-harvesting/
 │   │   ├── collector.ts
 │   │   ├── fetcher.ts
-│   │   ├── model.ts
-│   │   ├── preprocess.ts
-│   │   ├── scanner.ts
-│   │   ├── storage.ts
-│   │   ├── trainingData.json
-│   │   └── types.ts
-│   ├── database/
-│   │   └── index.ts
-│   ├── ml/
-│   │   └── model.ts
+│   │   ├── scan-chain.ts
+│   │   └── scan-token.ts
+│   ├── data-processing/
+│   │   ├── metrics.ts
+│   │   ├── parser.ts
+│   │   └── storage.ts
+│   ├── db/
+│   │   ├── migrations/
+│   │   ├── models/
+│   │   │   └── Token.ts
+│   │   ├── seeders/
+│   │   └── connection.ts
+│   ├── integrations/
+│   ├── models/
+│   │   ├── datasets/
+│   │   │   └── training.json
+│   │   └── trained/
+│   │   │   ├── model.json
+│   │   │   └── weights.bin
+│   ├── monitor/
+│   │   └── collector.ts
 │   ├── scripts/
+│   │   ├── clean-db.ts
+│   │   ├── collect-data.ts
 │   │   └── train.ts
+│   ├── tests/
+│   │   ├── api/
+│   │   │   └── routes/
+│   │   │   │   └── tokens.test.ts
+│   │   ├── db/
+│   │   └── services/
+│   │   │   └── ml/
+│   │   │   │   └── predictor.test.ts
 │   ├── training/
-│   │   └── train.ts
-│   ├── .DS_Store
-│   ├── character.ts
-│   ├── index.ts
-│   └── scan.ts
-├── tests/
-│   └── data/
-│   │   └── fetcher.test.ts
+│   │   ├── modelEvaluator.ts
+│   │   ├── modelPredictor.ts
+│   │   └── modelTrainer.ts
+│   ├── types/
+│   │   ├── api.ts
+│   │   └── data.ts
+│   ├── utils/
+│   │   └── utils.ts
+│   └── index.ts
 ├── .DS_Store
 ├── .env
 ├── .env.example
@@ -192,7 +231,26 @@ rug-watch-dog/
 ├── README.md
 └── tsconfig.json
 ```
+
+Key Changes:
+1. Renamed `/data` to `/models` with subdirectories for trained models and datasets
+2. Reorganized `/src` into logical groups:
+   - `api/`: All API-related code
+   - `services/`: Core business logic
+   - `types/`: TypeScript definitions
+   - `utils/`: Helper functions
+3. Moved data processing code to `services/data/`
+4. Grouped ML-related code under `services/ml/`
+5. Consolidated integrations under `services/integrations/`
+
+This structure provides:
+- Clear separation between models/data and source code
+- Logical grouping of related functionality
+- Better scalability for future features
+- More intuitive navigation
+
 ---
+
 ## 🛠️ Setup
 
 ### 1. Clone the Repository
