@@ -226,9 +226,13 @@ pnpm install
 ### 3. Set Up Environment Variables
 Create a `.env` file in the root directory:
 ```env
-# Required API Keys
+# API Keys
 ETHERSCAN_API_KEY=your_etherscan_key_here
+BSCSCAN_API_KEY=your_bscscan_api_key_here
+POLYGONSCAN_API_KEY=your_polygonscan_api_key_here
 ALCHEMY_API_KEY=your_alchemy_api_key_here
+
+# RPC Endpoints
 ETHEREUM_RPC=https://eth-mainnet.g.alchemy.com/v2/your_alchemy_api_key
 BSC_RPC=https://bsc-dataseed1.binance.org
 POLYGON_RPC=https://polygon-mainnet.g.alchemy.com/v2/your_alchemy_api_key
@@ -326,7 +330,6 @@ curl -X POST http://localhost:3000/analyze \
 
 2. Train with new data:
 ```bash
-pnpm collect-data
 pnpm train
 ```
 

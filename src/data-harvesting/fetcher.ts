@@ -5,7 +5,17 @@ import { TokenData, TokenMetrics } from '../types/data';
 
 dotenv.config();
 
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+const ENDPOINTS = {
+    ethereum: 'https://api.etherscan.io/api',
+    bsc: 'https://api.bscscan.com/api',
+    polygon: 'https://api.polygonscan.com/api'
+};
+
+const API_KEYS = {
+    ethereum: process.env.ETHERSCAN_API_KEY,
+    bsc: process.env.BSCSCAN_API_KEY,
+    polygon: process.env.POLYGONSCAN_API_KEY
+};
 
 interface Transaction {
     from: string;
@@ -50,14 +60,23 @@ interface AccumulationMetrics {
     stealthAccumulation: number;
 }
 
-async function fetchEtherscanData(tokenAddress: string): Promise<EtherscanData | null> {
+async function fetchEtherscanData(tokenAddress: string, chain: string = 'ethereum'): Promise<EtherscanData | null> {
     try {
-        const response = await axios.get(`https://api.etherscan.io/api`, {
+        const endpoint = ENDPOINTS[chain as keyof typeof ENDPOINTS];
+        const apiKey = API_KEYS[chain as keyof typeof API_KEYS];
+        
+        if (!endpoint || !apiKey) {
+            console.log(`❌ No Etherscan endpoint or API key for chain: ${chain}`);
+            return null;
+        }
+
+        console.log(`🔑 Using ${chain}scan API key: ${apiKey.slice(0, 6)}...`);
+        const response = await axios.get(endpoint, {
             params: {
                 module: 'account',
                 action: 'tokentx',
                 contractaddress: tokenAddress,
-                apikey: ETHERSCAN_API_KEY,
+                apikey: apiKey,
                 sort: 'desc'
             }
         });
@@ -65,41 +84,84 @@ async function fetchEtherscanData(tokenAddress: string): Promise<EtherscanData |
         if (response.data?.status === '1' && Array.isArray(response.data.result)) {
             return response.data as EtherscanData;
         }
+        
+        console.log(`❌ Invalid response from ${chain}scan:`, response.data?.message || 'Unknown error');
         return null;
     } catch (error: unknown) {
-        console.error('Error fetching Etherscan data:', error instanceof Error ? error.message : 'Unknown error');
+        console.error(`Error fetching ${chain}scan data:`, error instanceof Error ? error.message : 'Unknown error');
         return null;
     }
 }
 
 async function fetchDexScreenerData(tokenAddress: string): Promise<DexScreenerData | null> {
+    console.log('\n🔍 Entering fetchDexScreenerData()');
+    console.log(`📊 Fetching DexScreener data for: ${tokenAddress}`);
     try {
+        console.log('🌐 Making API request to DexScreener...');
         const response = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`);
+        console.log('✅ DexScreener API request successful');
+        if (response.data?.pairs?.length > 0) {
+            console.log(`📈 Found ${response.data.pairs.length} trading pairs`);
+            console.log(`💰 Price: $${response.data.pairs[0].priceUsd || 'unknown'}`);
+            console.log(`💧 Liquidity: $${response.data.pairs[0].liquidity?.usd || 'unknown'}`);
+        }
         return response.data as DexScreenerData;
     } catch (error: unknown) {
-        console.error('Error fetching DexScreener data:', error instanceof Error ? error.message : 'Unknown error');
+        console.error('❌ Error fetching DexScreener data:', error instanceof Error ? error.message : 'Unknown error');
         return null;
+    } finally {
+        console.log('✅ Exiting fetchDexScreenerData()');
     }
 }
 
 async function detectBundlerPattern(transactions: Transaction[]): Promise<BundlerPattern> {
-    const timeGaps = calculateTimeGaps(transactions);
-    const variance = calculateVariance(timeGaps);
+    console.log('\n🔍 Entering detectBundlerPattern()');
+    console.log(`📊 Analyzing ${transactions.length} transactions for patterns`);
     
-    return {
+    console.log('⏱️ Calculating time gaps between transactions...');
+    const timeGaps = calculateTimeGaps(transactions);
+    console.log(`📈 Found ${timeGaps.length} time gaps`);
+    
+    console.log('🧮 Calculating variance in time gaps...');
+    const variance = calculateVariance(timeGaps);
+    console.log(`📊 Time gap variance: ${variance.toFixed(4)}`);
+    
+    const pattern = {
         isFromBundler: variance < 0.1,
         similarTransactionCount: transactions.length,
         timePattern: variance
     };
+    
+    console.log(`🤖 Bundler detection results:`);
+    console.log(`   Is bundler: ${pattern.isFromBundler ? 'Yes' : 'No'}`);
+    console.log(`   Similar transactions: ${pattern.similarTransactionCount}`);
+    console.log(`   Time pattern score: ${pattern.timePattern.toFixed(4)}`);
+    
+    console.log('✅ Exiting detectBundlerPattern()');
+    return pattern;
 }
 
 async function calculateAccumulationMetrics(transactions: Transaction[]): Promise<AccumulationMetrics> {
-    const uniqueAddresses = new Set(transactions.map(tx => tx.to));
-    const totalTransactions = transactions.length;
+    console.log('\n🔍 Entering calculateAccumulationMetrics()');
+    console.log(`📊 Analyzing ${transactions.length} transactions for accumulation patterns`);
     
+    console.log('👥 Calculating unique addresses...');
+    const uniqueAddresses = new Set(transactions.map(tx => tx.to));
+    console.log(`📈 Found ${uniqueAddresses.size} unique addresses`);
+    
+    const totalTransactions = transactions.length;
+    const accumulationRate = uniqueAddresses.size / totalTransactions;
+    const stealthAccumulation = totalTransactions > 100 ? 0.8 : 0.2;
+    
+    console.log('📊 Accumulation metrics calculated:');
+    console.log(`   Accumulation rate: ${accumulationRate.toFixed(4)}`);
+    console.log(`   Stealth score: ${stealthAccumulation}`);
+    console.log(`   Unique addresses ratio: ${(uniqueAddresses.size / totalTransactions * 100).toFixed(1)}%`);
+    
+    console.log('✅ Exiting calculateAccumulationMetrics()');
     return {
-        accumulationRate: uniqueAddresses.size / totalTransactions,
-        stealthAccumulation: totalTransactions > 100 ? 0.8 : 0.2
+        accumulationRate,
+        stealthAccumulation
     };
 }
 
@@ -156,12 +218,21 @@ function calculateMarketCapRisk(dexData: DexScreenerData | null): number {
 
 export async function fetchTokenData(tokenAddress: string, chain: string = 'ethereum'): Promise<TokenData | null> {
     try {
-        const etherscanData = await fetchEtherscanData(tokenAddress);
-        const dexData = await fetchDexScreenerData(tokenAddress);
+        console.log(`\n📊 Fetching data for token: ${tokenAddress} on ${chain}`);
         
-        if (!etherscanData?.result || !dexData?.pairs) {
+        const etherscanData = await fetchEtherscanData(tokenAddress, chain);
+        if (!etherscanData?.result) {
+            console.log('❌ Failed to fetch Etherscan data');
             return null;
         }
+        console.log(`✅ ${chain}scan data received: ${etherscanData.result.length} transactions`);
+        
+        const dexData = await fetchDexScreenerData(tokenAddress);
+        if (!dexData?.pairs) {
+            console.log('❌ Failed to fetch DexScreener data');
+            return null;
+        }
+        console.log(`✅ DexScreener data received: ${dexData.pairs.length} pairs`);
         
         const bundlerPattern = await detectBundlerPattern(etherscanData.result);
         const accMetrics = await calculateAccumulationMetrics(etherscanData.result);
