@@ -6,10 +6,10 @@ import fs from 'fs/promises';
 import path from 'path';
 
 // Configuration
-const TARGET_TOKENS = 100; // 🎯 Target number of tokens to collect
-const BLOCKS_TO_SCAN = 5; // 📦 Number of blocks to scan
-const TXS_PER_BLOCK = 100; // 📝 Number of transactions to check per block
-const BLOCK_SKIP = 100; // ⏭️  Number of blocks to skip each time
+const TARGET_TOKENS = 1000; // 🎯 Target number of tokens to collect
+const BLOCKS_TO_SCAN = 100;  // Increased from 5 to 100 blocks
+const TXS_PER_BLOCK = 100;   // Keep checking 100 transactions per block
+const BLOCK_SKIP = 50;       // Skip 50 blocks between each scan for variety
 const OUTPUT_DIR = path.join(process.cwd(), 'src', 'ml', 'models', 'datasets');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'training.json');
 
@@ -177,154 +177,82 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T
     return result;
 };
 
-async function collectTrainingData(numTokens: number = TARGET_TOKENS) {
-    const startTime = Date.now();
-    let trainingData: TokenData[] = await loadProgress();
-    const chains = ['ethereum'] as const;
-    const remainingTokens = numTokens - trainingData.length;
-    const tokensPerChain = Math.ceil(remainingTokens / chains.length);
-    
-    console.log('\n🚀 Initializing Training Data Collection');
-    console.log('----------------------------------------');
-    console.log(`🎯 Target: ${TARGET_TOKENS} tokens`);
-    console.log(`✨ Tokens per chain: ${tokensPerChain}`);
-    console.log(`📊 Chain: ${chains.join(', ')}`);
-    console.log(`📈 Progress: ${trainingData.length} tokens already collected`);
-    console.log('----------------------------------------\n');
-    
-    for (const chain of chains) {
-        const chainStartTime = Date.now();
-        console.log(`\n🔍 Processing ${chain.toUpperCase()} chain`);
-        console.log('----------------------------------------');
-        const provider = new ethers.JsonRpcProvider(RPC_ENDPOINTS[chain]);
+// Helper to detect if an address is a token contract
+async function isTokenContract(address: string, provider: ethers.JsonRpcProvider): Promise<boolean> {
+    try {
+        // Get the contract code
+        const code = await provider.getCode(address);
+        if (code === '0x') return false;
         
-        try {
-            const latestBlock = await provider.getBlockNumber();
-            console.log(`📡 Connected to ${chain} network`);
-            console.log(`📦 Latest block: ${latestBlock}`);
-            console.log(`🔍 Will scan ${BLOCKS_TO_SCAN} blocks`);
-            console.log(`📝 Checking ${TXS_PER_BLOCK} transactions per block`);
-            let processedBlocks = 0;
-            
-            for (let i = 0; i < BLOCKS_TO_SCAN && trainingData.length < numTokens; i++) {
-                const blockNumber = latestBlock - (i * BLOCK_SKIP);
-                const result = await processBlock(blockNumber, chain, provider);
-                
-                if (!result) continue;
-                processedBlocks++;
-                
-                // Process found contracts
-                for (const contract of result.contracts) {
-                    console.log(`\n🔎 Contract found: ${contract}`);
-                    const tokenData = await fetchTokenData(contract, chain);
-                    
-                    if (tokenData) {
-                        trainingData.push(tokenData);
-                        await appendToken(tokenData);
-                        console.log(`✅ Valid token collected: ${contract}`);
-                        console.log(`📊 Progress: ${progressBar(trainingData.length, numTokens)}`);
-                        
-                        if (trainingData.length >= numTokens) {
-                            console.log('\n🎯 Target reached!');
-                            break;
-                        }
-                    }
-                }
-                
-                await sleep(500); // Reduced delay between blocks
-            }
-            
-            const chainTime = formatDuration(Date.now() - chainStartTime);
-            console.log(`\n✨ ${chain.toUpperCase()} scan completed in ${chainTime}`);
-            console.log(`📊 Final stats:`);
-            console.log(`   Blocks scanned: ${processedBlocks}`);
-            console.log(`   Tokens collected: ${trainingData.length}`);
-            
-        } catch (error) {
-            console.error(`❌ Chain error:`, error);
-            continue;
-        }
+        // Check for common ERC20 function signatures
+        const hasTransfer = code.includes('a9059cbb');        // transfer
+        const hasBalanceOf = code.includes('70a08231');       // balanceOf
+        const hasTransferFrom = code.includes('23b872dd');    // transferFrom
+        
+        return hasTransfer && hasBalanceOf;
+    } catch (error) {
+        console.error('Error checking contract:', error);
+        return false;
     }
-    
-    const totalTime = formatDuration(Date.now() - startTime);
-    console.log('\n🏁 Collection Complete');
-    console.log('----------------------------------------');
-    console.log(`✨ Total tokens collected: ${trainingData.length}`);
-    console.log(`⏱️  Total time: ${totalTime}`);
-    console.log(`💾 Data saved to: ${OUTPUT_FILE}`);
-    console.log('----------------------------------------\n');
-    
-    return trainingData;
 }
 
-// Helper function to process a single block
-async function processBlock(blockNumber: number, chain: string, provider: ethers.JsonRpcProvider) {
-    try {
-        // Get block with retry, rate limiting, and timeout
-        const block = await withTimeout(
-            rateLimiters[chain as keyof typeof rateLimiters].add(() =>
-                withRetry(() => provider.getBlock(blockNumber))
-            ),
-            5000 // 5 second timeout
-        );
+async function collectTrainingData(numTokens: number = TARGET_TOKENS): Promise<TokenData[]> {
+    const startTime = Date.now();
+    const collectedTokens: TokenData[] = [];
+    let tokensCollected = 0;
 
-        if (!block || !block.transactions) {
-            console.log(`⚠️  Block ${blockNumber}: No transactions or timeout`);
-            return null;
-        }
-        
-        console.log(`\n📍 Block ${blockNumber} [${block.transactions.length} txs]`);
-        
-        // Use configured number of transactions
-        const transactions = block.transactions.slice(0, TXS_PER_BLOCK);
-        const contracts: string[] = [];
-        const BATCH_SIZE = 5;
-        
-        for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
-            console.log(`Processing batch ${i / BATCH_SIZE + 1} of ${Math.ceil(transactions.length / BATCH_SIZE)}`);
-            const batch = transactions.slice(i, i + BATCH_SIZE);
-            const txPromises = batch.map(txHash => 
-                withTimeout(
-                    rateLimiters[chain as keyof typeof rateLimiters].add(() =>
-                        withRetry(async () => {
-                            const tx = await provider.getTransaction(txHash);
-                            const shortHash = txHash.slice(0, 8) + '...';
-                            const scannerUrl = chain === 'bsc' 
-                                ? `https://bscscan.com/tx/${txHash}`
-                                : chain === 'polygon'
-                                ? `https://polygonscan.com/tx/${txHash}`
-                                : `https://etherscan.io/tx/${txHash}`;
-                            // Use ANSI escape codes to create a clickable link
-                            console.log(`🧾 Tx: \x1b]8;;${scannerUrl}\x07${shortHash}\x1b]8;;\x07`);
-                            if (!tx || tx.to) return null;
-                            const receipt = await provider.getTransactionReceipt(txHash);
-                            return receipt?.contractAddress || null;
-                        })
-                    ),
-                    3000 // 3 second timeout per transaction
-                )
-            );
-            
-            const results = await Promise.all(txPromises);
-            contracts.push(...results.filter((addr): addr is string => !!addr));
-            
-            // Exit early if we found any contracts
-            if (contracts.length > 0) {
-                console.log(`🎯 Found ${contracts.length} contracts, moving to next block`);
-                break;
+    console.log('\n🚀 Starting data collection...');
+    console.log(`🎯 Target: ${numTokens} tokens`);
+
+    for (const chain of ['ethereum']) {
+        try {
+            const provider = new ethers.JsonRpcProvider(RPC_ENDPOINTS[chain as keyof typeof RPC_ENDPOINTS]);
+            console.log(`\n📡 Connected to ${chain.toUpperCase()} network`);
+
+            const latestBlock = await provider.getBlockNumber();
+            console.log(`📦 Latest block: ${latestBlock}`);
+            console.log(`🔍 Scanning ${BLOCKS_TO_SCAN} blocks, ${TXS_PER_BLOCK} transactions per block`);
+
+            for (let i = 0; i < BLOCKS_TO_SCAN && tokensCollected < numTokens; i++) {
+                const blockNumber = latestBlock - (i * BLOCK_SKIP);
+                const block = await provider.getBlock(blockNumber);
+                
+                if (!block) continue;
+
+                console.log(`\n📦 Processing block ${blockNumber} (${i + 1}/${BLOCKS_TO_SCAN})`);
+                
+                // Process transactions
+                const transactions = block.transactions.slice(0, TXS_PER_BLOCK);
+                for (const txHash of transactions) {
+                    try {
+                        const tx = await provider.getTransaction(txHash);
+                        if (!tx || !tx.to) continue;
+
+                        const tokenData = await fetchTokenData(tx.to, chain);
+                        if (tokenData) {
+                            await appendToken(tokenData);
+                            collectedTokens.push(tokenData);
+                            tokensCollected++;
+                            console.log(`✅ Token collected (${tokensCollected}/${numTokens}): ${tx.to}`);
+                            
+                            if (tokensCollected >= numTokens) {
+                                console.log('\n🎉 Target number of tokens collected!');
+                                return collectedTokens;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error processing transaction:', error);
+                    }
+                }
             }
-            
-            await sleep(200);
+        } catch (error) {
+            console.error(`❌ Error processing ${chain} chain:`, error);
         }
-        
-        return {
-            txCount: transactions.length,
-            contracts
-        };
-    } catch (error) {
-        console.error(`❌ Block error:`, error);
-        return null;
     }
+
+    const duration = Date.now() - startTime;
+    console.log(`\n✨ Collection complete! Collected ${tokensCollected} tokens in ${duration/1000}s`);
+    return collectedTokens;
 }
 
 // Export for use in training script
