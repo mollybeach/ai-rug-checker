@@ -230,6 +230,8 @@ Create a `.env` file in the root directory:
 ETHERSCAN_API_KEY=your_etherscan_key_here
 ALCHEMY_API_KEY=your_alchemy_api_key_here
 ETHEREUM_RPC=https://eth-mainnet.g.alchemy.com/v2/your_alchemy_api_key
+BSC_RPC=https://bsc-dataseed1.binance.org
+POLYGON_RPC=https://polygon-mainnet.g.alchemy.com/v2/your_alchemy_api_key
 
 # Discord Integration (Optional)
 DISCORD_APPLICATION_ID=your_discord_app_id
