@@ -12,6 +12,40 @@ Check out the live demo: [RugWatchDog](https://rugwatchdog.vercel.app/)
 - **Eliza Chatbot Integration**: Interact with a conversational AI assistant on Discord, Telegram, and Twitter for real-time insights.
 - **FUD Alerts**: Automatically generate social media alerts for high-risk tokens to keep the community informed.
 - **Customizable AI Models**: Train and adapt the AI to detect emerging fraud patterns in the crypto ecosystem.
+
+## 🔄 Application Flow
+
+```
+User Input (Token Address)
+         ↓
+    Data Collection
+    /            \
+Etherscan     DexScreener
+    \            /
+    Data Processing
+         ↓
+  Calculate Metrics
+         ↓
+   AI Risk Analysis
+         ↓
+  Risk Assessment
+     /        \
+High Risk    Low Risk
+   ↓            ↓
+FUD Alert    Store Data
+   ↓            ↓
+Social      Training
+Media       Dataset
+```
+
+### Process Explanation:
+
+1. **Input**: User submits a token address for analysis
+2. **Data Collection**: System fetches data from multiple sources
+3. **Processing**: Raw data is transformed into risk metrics
+4. **Analysis**: AI model evaluates the risk factors
+5. **Output**: Generates alerts or stores results for training
+
 ---
 ## 📂 Project Structure
 ```
@@ -27,9 +61,11 @@ rug-watch-dog/
 │   ├── tate.character.json
 │   └── trump.character.json
 ├── data/
-│   └── model/
+│   ├── model/
 │   │   ├── model.json
 │   │   └── weights.bin
+│   └── trainingData.json
+├── dist/
 ├── node_modules/
 ├── scripts/
 │   ├── clean.sh
@@ -45,19 +81,30 @@ rug-watch-dog/
 │   ├── config/
 │   │   └── index.ts
 │   ├── data/
+│   │   ├── collector.ts
 │   │   ├── fetcher.ts
 │   │   ├── model.ts
 │   │   ├── preprocess.ts
-│   │   └── trainingData.json
+│   │   ├── scanner.ts
+│   │   ├── storage.ts
+│   │   ├── trainingData.json
+│   │   └── types.ts
 │   ├── database/
 │   │   └── index.ts
 │   ├── ml/
 │   │   └── model.ts
+│   ├── scripts/
+│   │   └── train.ts
+│   ├── training/
+│   │   └── train.ts
+│   ├── .DS_Store
 │   ├── character.ts
-│   └── index.ts
+│   ├── index.ts
+│   └── scan.ts
 ├── tests/
 │   └── data/
 │   │   └── fetcher.test.ts
+├── .DS_Store
 ├── .env
 ├── .env.example
 ├── .gitignore
