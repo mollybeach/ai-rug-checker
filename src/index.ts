@@ -24,10 +24,10 @@ import {
 } from "./config/index.js";
 import { initializeDatabase } from "./database/index.js";
 import express, { Request, Response } from "express";
-import { preprocessTokenData } from "./data/preprocess.js";
+import { preprocessTokenData } from "./data/preprocess";
 import { trainModel } from "./ml/model.js";
 import * as tf from "@tensorflow/tfjs-node";
-import { fetchTokenData } from "./data/fetcher.js";
+import { fetchTokenData } from "./data/fetcher";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
