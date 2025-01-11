@@ -46,7 +46,83 @@ Media       Dataset
 4. **Analysis**: AI model evaluates the risk factors
 5. **Output**: Generates alerts or stores results for training
 
+
+For more details on each step, see the documentation below.
+
+## 🔧 Technical Architecture
+
+```
+User Request → [src/index.ts + src/scan.ts]
+                         ↓
+Data Collection → [src/data/fetcher.ts]
+    │                    ↓
+    └→ Etherscan    Process Data
+    └→ DexScreener  [src/data/preprocess.ts]
+                         ↓
+                   ML Analysis
+                   [src/ml/model.ts]
+                         ↓
+                   Generate Alerts
+                   [src/clients/index.ts]
+```
+
+### Key Components:
+
+1. **Entry Points**
+   - `src/index.ts`: Express server setup
+   - `src/scan.ts`: API route handlers
+
+2. **Data Layer**
+   - `src/data/fetcher.ts`: External API integration
+   - `src/data/collector.ts`: Data collection
+   - `src/data/scanner.ts`: Analysis orchestration
+
+3. **Processing Layer**
+   - `src/data/preprocess.ts`: Data normalization
+   - `src/data/storage.ts`: Data persistence
+   - `src/data/types.ts`: Type definitions
+
+4. **ML Layer**
+   - `src/ml/model.ts`: TensorFlow.js model
+   - `src/training/train.ts`: Model training
+   - `data/trainingData.json`: Training dataset
+
+5. **Integration Layer**
+   - `src/chat/index.ts`: Chat interface
+   - `src/clients/index.ts`: Social media
+   - `src/cache/index.ts`: Caching logic
+
 ---
+
+## 🔧 Technical Components
+
+### 1. Data Collection Layer
+- `src/data/fetcher.ts`: Handles API calls to Etherscan and DexScreener
+- `src/data/collector.ts`: Manages training data collection
+- `src/data/scanner.ts`: Orchestrates token analysis process
+
+### 2. Data Processing Layer
+- `src/data/preprocess.ts`: Normalizes and transforms raw data
+- `src/data/storage.ts`: Manages data persistence and retrieval
+- `src/data/types.ts`: Defines data structures and interfaces
+
+### 3. Machine Learning Layer
+- `src/ml/model.ts`: Core ML model implementation
+- `src/training/train.ts`: Model training and validation
+- `data/trainingData.json`: Curated dataset for training
+
+### 4. Integration Layer
+- `src/chat/index.ts`: Chat interface implementation
+- `src/clients/index.ts`: Social media client integrations
+- `src/cache/index.ts`: Performance optimization
+
+### 5. Configuration Layer
+- `src/character.ts`: AI personality settings
+- `src/config/index.ts`: Application configuration
+- `src/database/index.ts`: Database connection management
+
+---
+
 ## 📂 Project Structure
 ```
 rug-watch-dog/
