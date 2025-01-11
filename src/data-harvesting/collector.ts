@@ -10,7 +10,7 @@ const TARGET_TOKENS = 1000; // 🎯 Target number of tokens to collect
 const BLOCKS_TO_SCAN = 100;  // Increased from 5 to 100 blocks
 const TXS_PER_BLOCK = 100;   // Keep checking 100 transactions per block
 const BLOCK_SKIP = 50;       // Skip 50 blocks between each scan for variety
-const OUTPUT_DIR = path.join(process.cwd(), 'src', 'ml', 'models', 'datasets');
+const OUTPUT_DIR = path.join(process.cwd(), 'src', 'models', 'datasets');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'training.json');
 
 const RPC_ENDPOINTS = {
