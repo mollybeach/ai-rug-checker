@@ -1,4 +1,4 @@
-//path: src/training/modelTrain.ts
+//path: src/training/modelTrainer.ts
 import * as tf from '@tensorflow/tfjs-node';
 import { TrainingData } from '../types/data';
 import { preprocessTokenData } from '../data-processing/parser';
@@ -9,6 +9,12 @@ const MODEL_DIR = path.join(process.cwd(), 'models', 'trained');
 const MODEL_PATH = 'file://' + path.join(MODEL_DIR, 'model.json');
 
 export async function trainModel(trainingData: TrainingData[]): Promise<tf.LayersModel> {
+    if (trainingData.length === 0) {
+        throw new Error('No training data provided');
+    }
+
+    console.log(`Training with ${trainingData.length} samples`);
+    
     // Create sequential model
     const model = tf.sequential();
     
@@ -44,14 +50,35 @@ export async function trainModel(trainingData: TrainingData[]): Promise<tf.Layer
     const ys = tf.tensor2d(labels, [labels.length, 1]);
     
     try {
+        // Adjust training parameters based on dataset size
+        const batchSize = Math.max(1, Math.min(32, Math.floor(trainingData.length / 2)));
+        const validationSplit = trainingData.length > 10 ? 0.2 : 0; // Only use validation split if we have enough data
+        
+        console.log(`Using batch size: ${batchSize}, validation split: ${validationSplit}`);
+        
         // Train model
         await model.fit(xs, ys, {
             epochs: 100,
-            batchSize: 32,
-            validationSplit: 0.2,
+            batchSize,
+            validationSplit,
+            verbose: 1,
             callbacks: {
                 onEpochEnd: (epoch, logs) => {
-                    console.log(`Epoch ${epoch + 1}: loss = ${logs?.loss.toFixed(4)}, accuracy = ${logs?.acc.toFixed(4)}`);
+                    if (logs) {
+                        let logMessage = `Epoch ${epoch + 1}/100 - loss: ${logs.loss.toFixed(4)}`;
+                        if (logs.acc !== undefined) {
+                            logMessage += `, accuracy: ${logs.acc.toFixed(4)}`;
+                        }
+                        if (validationSplit > 0) {
+                            if (logs.val_loss !== undefined) {
+                                logMessage += `, val_loss: ${logs.val_loss.toFixed(4)}`;
+                            }
+                            if (logs.val_acc !== undefined) {
+                                logMessage += `, val_accuracy: ${logs.val_acc.toFixed(4)}`;
+                            }
+                        }
+                        console.log(logMessage);
+                    }
                 }
             }
         });

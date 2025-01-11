@@ -7,9 +7,9 @@ import path from 'path';
 
 // Configuration
 const TARGET_TOKENS = 1; // 🎯 Target number of tokens to collect
-const BLOCKS_TO_SCAN = 2; // 📦 Number of blocks to scan
-const TXS_PER_BLOCK = 5; // 📝 Number of transactions to check per block
-const BLOCK_SKIP = 500; // ⏭️  Number of blocks to skip each time
+const BLOCKS_TO_SCAN = 50; // 📦 Number of blocks to scan
+const TXS_PER_BLOCK = 20; // 📝 Number of transactions to check per block
+const BLOCK_SKIP = 100; // ⏭️  Number of blocks to skip each time
 const OUTPUT_DIR = path.join(process.cwd(), 'src', 'ml', 'models', 'datasets');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'training.json');
 
@@ -186,7 +186,8 @@ async function collectTrainingData(numTokens: number = TARGET_TOKENS) {
     
     console.log('\n🚀 Initializing Training Data Collection');
     console.log('----------------------------------------');
-    console.log(`🎯 Target: ${numTokens} tokens`);
+    console.log(`🎯 Target: ${TARGET_TOKENS} tokens`);
+    console.log(`✨ Tokens per chain: ${tokensPerChain}`);
     console.log(`📊 Chain: ${chains.join(', ')}`);
     console.log(`📈 Progress: ${trainingData.length} tokens already collected`);
     console.log('----------------------------------------\n');
