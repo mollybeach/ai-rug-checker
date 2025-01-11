@@ -1,9 +1,13 @@
 import { ethers } from 'ethers';
 import config from '../config/default';
 import { fetchTokenData } from './fetcher';
-import Token from '../db/models/Token';
+import { initToken } from '../db/models/Token';
+import { Sequelize } from 'sequelize';
 
-async function scanChain(chain: keyof typeof config.rpc, batchSize: number = config.scan.batchSize) {
+const sequelize = new Sequelize(process.env.DATABASE_URL || 'sqlite::memory:');
+const Token = initToken(sequelize);
+
+async function monitorChain(chain: keyof typeof config.rpc, batchSize: number = config.scan.batchSize) {
     const provider = new ethers.JsonRpcProvider(config.rpc[chain]);
     console.log(`\n🔍 Scanning ${chain} chain...`);
     
@@ -38,7 +42,16 @@ async function scanChain(chain: keyof typeof config.rpc, batchSize: number = con
                         await Token.create({
                             address: receipt.contractAddress,
                             chain,
-                            ...tokenData
+                            name: tokenData.name,
+                            symbol: tokenData.symbol,
+                            volumeAnomaly: tokenData.volumeAnomaly,
+                            holderConcentration: tokenData.holderConcentration,
+                            liquidityScore: tokenData.liquidityScore,
+                            priceVolatility: tokenData.priceVolatility,
+                            sellPressure: tokenData.sellPressure,
+                            marketCapRisk: tokenData.marketCapRisk,
+                            isRugPull: tokenData.isRugPull,
+                            metadata: tokenData.metadata
                         });
                         console.log(`✅ Token data collected and saved`);
                         scannedTokens++;
@@ -58,13 +71,13 @@ async function scanChain(chain: keyof typeof config.rpc, batchSize: number = con
     }
 }
 
-async function startScanning() {
+async function startMonitoring() {
     const chains = ['ethereum', 'bsc', 'polygon'] as const;
     
     while (true) {
         try {
             for (const chain of chains) {
-                await scanChain(chain);
+                await monitorChain(chain);
             }
             console.log(`\n⏰ Waiting ${config.scan.scanInterval/1000} seconds until next scan...`);
             await new Promise(resolve => setTimeout(resolve, config.scan.scanInterval));
@@ -77,7 +90,7 @@ async function startScanning() {
 
 // Start scanning if this file is run directly
 if (require.main === module) {
-    startScanning().catch(error => {
+    startMonitoring().catch(error => {
         console.error('Fatal error:', error);
         process.exit(1);
     });

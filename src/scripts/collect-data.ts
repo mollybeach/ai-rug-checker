@@ -1,4 +1,4 @@
-import { scanToken } from '../data-harvesting/scan-token';
+import { scanToken } from '../data-harvesting/tokenScanner';
 import { trainModel } from '../training/modelTrainer';
 import { loadExistingData } from '../data-processing/storage';
 import { TokenData, TrainingData } from '../types/data';

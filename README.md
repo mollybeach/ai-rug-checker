@@ -82,8 +82,8 @@ For more details on each step, see the documentation below.
 ### 2. Data Collection (`src/data-harvesting/`)
 - `fetcher.ts`: External API integrations
 - `collector.ts`: Data collection orchestration
-- `scan-chain.ts`: Blockchain scanning
-- `scan-token.ts`: Token-specific scanning
+- `chainMonitor.ts`: Blockchain scanning
+- `tokenScanner.ts`: Token-specific scanning
 
 ### 3. Data Processing (`src/data-processing/`)
 - `metrics.ts`: Token metrics calculation
@@ -119,17 +119,17 @@ For more details on each step, see the documentation below.
 ## 🔧 Technical Components
 
 ### 1. Data Collection Layer
-- `src/data/fetcher.ts`: Handles API calls to Etherscan and DexScreener
-- `src/data/collector.ts`: Manages training data collection
-- `src/data/scanner.ts`: Orchestrates token analysis process
+- `src/data-harvesting/fetcher.ts`: Handles API calls to Etherscan and DexScreener
+- `src/data-harvesting/collector.ts`: Manages training data collection
+- `src/data-harvesting/scanner.ts`: Orchestrates token analysis process
 
 ### 2. Data Processing Layer
-- `src/data/preprocess.ts`: Normalizes and transforms raw data
-- `src/data/storage.ts`: Manages data persistence and retrieval
-- `src/data/types.ts`: Defines data structures and interfaces
+- `src/data-processing/preprocess.ts`: Normalizes and transforms raw data
+- `src/data-processing/storage.ts`: Manages data persistence and retrieval
+- `src/data-processing/types.ts`: Defines data structures and interfaces
 
 ### 3. Machine Learning Layer
-- `src/ml/model.ts`: Core ML model implementation
+- `src/training/model.ts`: Core ML model implementation
 - `src/training/train.ts`: Model training and validation
 - `data/trainingData.json`: Curated dataset for training
 
@@ -176,8 +176,8 @@ rug-watch-dog/
 │   ├── data-harvesting/
 │   │   ├── collector.ts
 │   │   ├── fetcher.ts
-│   │   ├── scan-chain.ts
-│   │   └── scan-token.ts
+│   │   ├── chainMonitor.ts
+│   │   └── tokenScanner.ts
 │   ├── data-processing/
 │   │   ├── metrics.ts
 │   │   ├── parser.ts

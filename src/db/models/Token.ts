@@ -2,6 +2,7 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 
 interface TokenAttributes {
     address: string;
+    chain: string;
     name: string;
     symbol: string;
     volumeAnomaly: number;
@@ -16,6 +17,7 @@ interface TokenAttributes {
 
 class Token extends Model<TokenAttributes> implements TokenAttributes {
     public address!: string;
+    public chain!: string;
     public name!: string;
     public symbol!: string;
     public volumeAnomaly!: number;
@@ -33,6 +35,10 @@ export function initToken(sequelize: Sequelize): typeof Token {
         address: {
             type: DataTypes.STRING,
             primaryKey: true,
+            allowNull: false
+        },
+        chain: {
+            type: DataTypes.STRING,
             allowNull: false
         },
         name: {

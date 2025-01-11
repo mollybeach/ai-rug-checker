@@ -13,6 +13,8 @@ export interface BaseMetrics extends TokenMetrics {
 
 export interface TokenData extends BaseMetrics {
     token: string;
+    name: string;
+    symbol: string;
     bundlerActivity: boolean;
     accumulationRate: number;
     stealthAccumulation: number;

@@ -22,6 +22,10 @@ interface BundlerPattern {
 
 interface DexScreenerData {
     pairs?: Array<{
+        baseToken?: {
+            name: string;
+            symbol: string;
+        };
         priceUsd?: number;
         volume?: {
             h24?: number;
@@ -174,6 +178,8 @@ export async function fetchTokenData(tokenAddress: string, chain: string = 'ethe
         
         return {
             token: tokenAddress,
+            name: dexData.pairs?.[0]?.baseToken?.name || 'Unknown',
+            symbol: dexData.pairs?.[0]?.baseToken?.symbol || 'UNKNOWN',
             ...metrics,
             bundlerActivity: bundlerPattern.isFromBundler,
             accumulationRate: accMetrics.accumulationRate,

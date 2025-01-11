@@ -1,4 +1,4 @@
-import { scanNewTokens, scanMultipleChains } from '../../data-harvesting/scan-token';
+import { scanNewTokens, scanMultipleChains } from '../../data-harvesting/tokenScanner';
 
 async function main() {
     const args = process.argv.slice(2);
