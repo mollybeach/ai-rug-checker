@@ -10,7 +10,8 @@
         "collect-data": "cross-env NODE_ENV=development node --experimental-specifier-resolution=node --loader ts-node/esm scripts/collectData.ts",
         "test": "jest --passWithNoTests",
         "dev": "nodemon --watch src --ext ts,json --exec 'cross-env NODE_ENV=development node --experimental-specifier-resolution=node --loader ts-node/esm src/index.ts'",
-        "clean": "rm -rf dist && rm -rf node_modules"
+        "clean": "rm -rf dist && rm -rf node_modules",
+        "scan": "node --loader ts-node/esm src/scan.ts"
     },
     "dependencies": {
         "@elizaos/adapter-postgres": "0.1.7",
@@ -35,6 +36,7 @@
         "better-sqlite3": "11.5.0",
         "cross-env": "^7.0.3",
         "dotenv": "^16.4.7",
+        "ethers": "^6.13.5",
         "express": "^4.21.2",
         "fs": "0.0.1-security",
         "net": "1.0.2",

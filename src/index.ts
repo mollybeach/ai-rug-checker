@@ -1,209 +1,139 @@
-import { DirectClient } from "@elizaos/client-direct";
-import {
-  AgentRuntime,
-  elizaLogger,
-  settings,
-  stringToUuid,
-  type Character,
-} from "@elizaos/core";
-import { bootstrapPlugin } from "@elizaos/plugin-bootstrap";
-import { createNodePlugin } from "@elizaos/plugin-node";
-import { solanaPlugin } from "@elizaos/plugin-solana";
-import fs from "fs";
-import net from "net";
-import path from "path";
-import { fileURLToPath } from "url";
-import { initializeDbCache } from "./cache/index.js";
-import { character } from "./character.js";
-import { startChat } from "./chat/index.js";
-import { initializeClients } from "./clients/index.js";
-import {
-  getTokenForProvider,
-  loadCharacters,
-  parseArguments,
-} from "./config/index.js";
-import { initializeDatabase } from "./database/index.js";
-import express, { Request, Response } from "express";
-import { preprocessTokenData } from "./data/preprocess";
-import { trainModel } from "./ml/model.js";
-import * as tf from "@tensorflow/tfjs-node";
-import { fetchTokenData } from "./data/fetcher";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-export const wait = (minTime: number = 1000, maxTime: number = 3000) => {
-  const waitTime =
-    Math.floor(Math.random() * (maxTime - minTime + 1)) + minTime;
-  return new Promise((resolve) => setTimeout(resolve, waitTime));
-};
-
-let nodePlugin: any | undefined;
-
-export function createAgent(
-  character: Character,
-  db: any,
-  cache: any,
-  token: string
-) {
-  elizaLogger.success(
-    elizaLogger.successesTitle,
-    "Creating runtime for character",
-    character.name,
-  );
-
-  nodePlugin ??= createNodePlugin();
-
-  return new AgentRuntime({
-    databaseAdapter: db,
-    token,
-    modelProvider: character.modelProvider,
-    evaluators: [],
-    character,
-    plugins: [
-      bootstrapPlugin,
-      nodePlugin,
-      character.settings?.secrets?.WALLET_PUBLIC_KEY ? solanaPlugin : null,
-    ].filter(Boolean),
-    providers: [],
-    actions: [],
-    services: [],
-    managers: [],
-    cacheManager: cache,
-  });
-}
-
-async function startAgent(character: Character, directClient: DirectClient) {
-  try {
-    character.id ??= stringToUuid(character.name);
-    character.username ??= character.name;
-
-    const token = getTokenForProvider(character.modelProvider, character) || '';
-    const dataDir = path.join(__dirname, "../data");
-
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-
-    const db = initializeDatabase(dataDir);
-
-    await db.init();
-
-    const cache = initializeDbCache(character, db);
-    const runtime = createAgent(character, db, cache, token);
-
-    await runtime.initialize();
-
-    runtime.clients = await initializeClients(character, runtime);
-
-    directClient.registerAgent(runtime);
-
-    elizaLogger.debug(`Started ${character.name} as ${runtime.agentId}`);
-
-    return runtime;
-  } catch (error) {
-    elizaLogger.error(
-      `Error starting agent for character ${character.name}:`,
-      error,
-    );
-    console.error(error);
-    throw error;
-  }
-}
-
-const checkPortAvailable = (port: number): Promise<boolean> => {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-
-    server.once("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") {
-        resolve(false);
-      }
-    });
-
-    server.once("listening", () => {
-      server.close();
-      resolve(true);
-    });
-
-    server.listen(port);
-  });
-};
+import express, { Request, Response, RequestHandler } from 'express';
+import * as tf from '@tensorflow/tfjs-node';
+import { fetchTokenData } from './data/fetcher.js';
+import { normalizeFeatures } from './data/preprocess.js';
+import { loadExistingData } from './data/storage.js';
+import { TokenData, TokenMetrics } from './data/types.js';
 
 const app = express();
 app.use(express.json());
 
-const startServer = async () => {
-  const directClient = new DirectClient();
-  let serverPort = parseInt(settings.SERVER_PORT || "3000");
-  const args = parseArguments();
+let model: tf.LayersModel | null = null;
 
-  let charactersArg = args.characters || args.character;
-  let characters = [character];
-
-  if (charactersArg) {
-    characters = await loadCharacters(charactersArg);
-  }
-
-  try {
-    for (const character of characters) {
-      await startAgent(character, directClient as DirectClient);
-    }
-  } catch (error) {
-    elizaLogger.error("Error starting agents:", error);
-  }
-
-  while (!(await checkPortAvailable(serverPort))) {
-    elizaLogger.warn(`Port ${serverPort} is in use, trying ${serverPort + 1}`);
-    serverPort++;
-  }
-
-  directClient.startAgent = async (character: Character) => {
-    return startAgent(character, directClient);
-  };
-
-  app.post("/analyze", async (req: Request, res: Response) => {
+// Load the model at startup
+async function loadModel() {
     try {
-      const tokenAddress = req.body.tokenAddress;
-      const tokenData = await fetchTokenData(tokenAddress);
-      const processedData = await preprocessTokenData(tokenData);
-      const model = await trainModel([
-        { 
-          volumeAnomaly: 0.75, 
-          holderConcentration: 0.9, 
-          liquidityScore: 0.3,
-          priceVolatility: 0.6,
-          sellPressure: 0.8,
-          marketCapRisk: 0.7, 
-          isRugPull: true 
-        },
-        { 
-          volumeAnomaly: 0.2,
-          holderConcentration: 0.4,
-          liquidityScore: 0.8,
-          priceVolatility: 0.3,
-          sellPressure: 0.2,
-          marketCapRisk: 0.4,
-          isRugPull: false
-        }
-      ]);
-      const prediction = await model.predict(tf.tensor2d([Object.values(processedData)], [1, 6]));
-      res.json({ riskScore: (prediction as tf.Tensor).dataSync() });
+        model = await tf.loadLayersModel('file://./models/model.json');
+        console.log('Model loaded successfully');
     } catch (error) {
-      console.error('Error in /analyze endpoint:', error);
-      res.status(500).json({ error: 'Internal server error' });
+        console.error('Error loading model:', error);
+        process.exit(1);
     }
-  });
+}
 
-  app.listen(serverPort, () => {
-    elizaLogger.log(`Server running on port ${serverPort}`);
-    elizaLogger.log("Chat started. Type 'exit' to quit.");
-    const chat = startChat(characters);
-    chat();
-  });
+interface AnalyzeRequest {
+    tokenAddress: string;
+    chain?: string;
+}
+
+// Endpoint to analyze a token
+const analyzeToken: RequestHandler<{}, any, AnalyzeRequest> = async (req, res, next) => {
+    try {
+        const { tokenAddress, chain = 'ethereum' } = req.body;
+
+        if (!tokenAddress) {
+            res.status(400).json({ error: 'Token address is required' });
+            return;
+        }
+
+        if (!model) {
+            res.status(500).json({ error: 'Model not loaded' });
+            return;
+        }
+
+        // Fetch and process token data
+        const tokenData = await fetchTokenData(tokenAddress, chain);
+        if (!tokenData) {
+            res.status(404).json({ error: 'Token data not found' });
+            return;
+        }
+
+        // Prepare features for prediction
+        const features = normalizeFeatures(tokenData);
+        const inputTensor = tf.tensor2d([features], [1, 6]);
+
+        // Make prediction
+        const prediction = model.predict(inputTensor) as tf.Tensor;
+        const rugPullProbability = prediction.dataSync()[0];
+
+        // Clean up tensor
+        inputTensor.dispose();
+        prediction.dispose();
+
+        res.json({
+            token: tokenAddress,
+            rugPullProbability,
+            metrics: {
+                volumeAnomaly: tokenData.volumeAnomaly,
+                holderConcentration: tokenData.holderConcentration,
+                liquidityScore: tokenData.liquidityScore,
+                priceVolatility: tokenData.priceVolatility,
+                sellPressure: tokenData.sellPressure,
+                marketCapRisk: tokenData.marketCapRisk
+            },
+            bundlerActivity: tokenData.bundlerActivity,
+            accumulationRate: tokenData.accumulationRate,
+            stealthAccumulation: tokenData.stealthAccumulation,
+            suspiciousPattern: tokenData.suspiciousPattern,
+            reason: tokenData.metadata.reason
+        });
+    } catch (error) {
+        console.error('Error analyzing token:', error);
+        res.status(500).json({ error: 'Error analyzing token' });
+    }
 };
 
-startServer().catch((error) => {
-  elizaLogger.error("Unhandled error in startServer:", error);
-  process.exit(1);
+// Endpoint to get training data statistics
+const getStats: RequestHandler = async (_req, res, next) => {
+    try {
+        const data = await loadExistingData();
+        const totalTokens = data.length;
+        const rugPulls = data.filter(t => t.isRugPull).length;
+        const legitimateTokens = totalTokens - rugPulls;
+
+        const averageMetrics = data.reduce<TokenMetrics>((acc, token) => {
+            acc.volumeAnomaly += token.volumeAnomaly;
+            acc.holderConcentration += token.holderConcentration;
+            acc.liquidityScore += token.liquidityScore;
+            acc.priceVolatility += token.priceVolatility;
+            acc.sellPressure += token.sellPressure;
+            acc.marketCapRisk += token.marketCapRisk;
+            return acc;
+        }, {
+            volumeAnomaly: 0,
+            holderConcentration: 0,
+            liquidityScore: 0,
+            priceVolatility: 0,
+            sellPressure: 0,
+            marketCapRisk: 0
+        });
+
+        // Calculate averages
+        if (totalTokens > 0) {
+            Object.keys(averageMetrics).forEach((key) => {
+                (averageMetrics as any)[key] = averageMetrics[key as keyof TokenMetrics] / totalTokens;
+            });
+        }
+
+        res.json({
+            totalTokens,
+            rugPulls,
+            legitimateTokens,
+            averageMetrics,
+            lastUpdated: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        res.status(500).json({ error: 'Error fetching statistics' });
+    }
+};
+
+app.post('/analyze', analyzeToken);
+app.get('/stats', getStats);
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => {
+    await loadModel();
+    console.log(`Server running on port ${PORT}`);
 });
