@@ -1,7 +1,7 @@
 // path: src/data-harvesting/collector.ts
-import { fetchTokenData } from './fetcher';
 import { TokenService } from '../db/services/TokenService';
 import { AppDataSource } from '../db/data-source';
+import { TokenData } from '../types/data';
 
 export class DataCollector {
     private tokenService: TokenService;
@@ -10,18 +10,11 @@ export class DataCollector {
         this.tokenService = new TokenService(AppDataSource);
     }
 
-    async collectAndStoreTokenData(tokenAddress: string, chain: string = 'ethereum'): Promise<void> {
+    async collectAndStoreTokenData(tokenData: TokenData): Promise<void> {
         try {
-            // Fetch token data from external sources
-            const tokenData = await fetchTokenData(tokenAddress, chain);
-            if (!tokenData) {
-                console.error(`No data found for token ${tokenAddress}`);
-                return;
-            }
-
             // Store base token information
             const token = await this.tokenService.upsertToken({
-                address: tokenAddress,
+                address: tokenData.token,
                 name: tokenData.name,
                 symbol: tokenData.symbol
             });
@@ -52,19 +45,19 @@ export class DataCollector {
                 liquidity: tokenData.liquidity || 0
             });
 
-            console.log(`Successfully stored data for token ${tokenAddress}`);
+            console.log(`Successfully stored data for token ${tokenData.token}`);
         } catch (error) {
-            console.error(`Error collecting data for token ${tokenAddress}:`, error);
+            console.error(`Error collecting data for token ${tokenData.token}:`, error);
             throw error;
         }
     }
 
-    async collectBatchTokenData(tokenAddresses: string[], chain: string = 'ethereum'): Promise<void> {
-        for (const address of tokenAddresses) {
+    async collectBatchTokenData(tokenDataArray: TokenData[]): Promise<void> {
+        for (const tokenData of tokenDataArray) {
             try {
-                await this.collectAndStoreTokenData(address, chain);
+                await this.collectAndStoreTokenData(tokenData);
             } catch (error) {
-                console.error(`Failed to collect data for token ${address}:`, error);
+                console.error(`Failed to collect data for token ${tokenData.token}:`, error);
                 continue;
             }
         }

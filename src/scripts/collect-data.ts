@@ -1,5 +1,7 @@
 import { initializeDatabase } from '../db/data-source';
 import { dataCollector } from '../data-harvesting/collector';
+import { fetchTokenData } from '../data-harvesting/fetcher';
+import { TokenData } from '../types/data';
 
 // List of tokens to monitor (example tokens)
 const TOKENS_TO_MONITOR = [
@@ -30,7 +32,22 @@ async function main() {
 
         // Collect data for each token
         console.log('Starting data collection...');
-        await dataCollector.collectBatchTokenData(TOKENS_TO_MONITOR);
+        
+        // Fetch token data for each address
+        const tokenDataArray: TokenData[] = [];
+        for (const address of TOKENS_TO_MONITOR) {
+            try {
+                const tokenData = await fetchTokenData(address, 'ethereum');
+                if (tokenData) {
+                    tokenDataArray.push(tokenData);
+                }
+            } catch (error) {
+                console.error(`Failed to fetch data for token ${address}:`, error);
+            }
+        }
+        
+        // Store the collected data
+        await dataCollector.collectBatchTokenData(tokenDataArray);
         console.log('Data collection completed');
 
         process.exit(0);

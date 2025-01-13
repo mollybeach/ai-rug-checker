@@ -1,0 +1,40 @@
+[
+  {
+    "token": "0x3E1d9EEeA0F66374242C922F6656ba72cf2b8c77",
+    "name": "N",
+    "symbol": "N",
+    "volumeAnomaly": 0.2,
+    "holderConcentration": 0.8,
+    "liquidityScore": 0.5,
+    "priceVolatility": 0.8,
+    "sellPressure": 0.2,
+    "marketCapRisk": 0.5,
+    "bundlerActivity": false,
+    "accumulationRate": 0.576271186440678,
+    "stealthAccumulation": 0.2,
+    "suspiciousPattern": false,
+    "isRugPull": false,
+    "metadata": {
+      "reason": "High concentration of holders, High price volatility"
+    }
+  },
+  {
+    "token": "0xc1B1E8f21DfF0BE85741F43F8Bd9e67eb6e88057",
+    "name": "BON Coin",
+    "symbol": "BON",
+    "volumeAnomaly": 0.2,
+    "holderConcentration": 0.8,
+    "liquidityScore": 0.8,
+    "priceVolatility": 0.8,
+    "sellPressure": 0.8,
+    "marketCapRisk": 0.8,
+    "bundlerActivity": false,
+    "accumulationRate": 0.5454545454545454,
+    "stealthAccumulation": 0.2,
+    "suspiciousPattern": false,
+    "isRugPull": true,
+    "metadata": {
+      "reason": "High concentration of holders, Low liquidity, High price volatility, High sell pressure, Market cap concerns"
+    }
+  }
+]

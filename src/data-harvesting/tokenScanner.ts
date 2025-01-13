@@ -1,7 +1,8 @@
 // path: src/data-harvesting/tokenScanner.ts
 import { ethers } from 'ethers';
 import { fetchTokenData } from './fetcher';
-import { appendTokenData } from '../data-processing/storage';
+import { DataCollector } from './collector';
+import { AppDataSource } from '../db/data-source';
 
 const RPC_ENDPOINTS = {
     ethereum: process.env.ETHEREUM_RPC || 'https://eth-mainnet.g.alchemy.com/v2/'+process.env.ALCHEMY_API_KEY,
@@ -10,6 +11,13 @@ const RPC_ENDPOINTS = {
 };
 
 export async function scanToken(chains: string[] = ['ethereum'], batchSize: number = 10): Promise<void> {
+    // Initialize database connection
+    await AppDataSource.initialize();
+    console.log('✅ Database initialized');
+    
+    // Create data collector instance
+    const dataCollector = new DataCollector();
+    
     for (const chain of chains) {
         const provider = new ethers.JsonRpcProvider(RPC_ENDPOINTS[chain as keyof typeof RPC_ENDPOINTS]);
         console.log(`\n🔍 Scanning ${chain} chain...`);
@@ -49,8 +57,9 @@ export async function scanToken(chains: string[] = ['ethereum'], batchSize: numb
                         const tokenData = await fetchTokenData(receipt.contractAddress, chain);
                         
                         if (tokenData) {
-                            await appendTokenData(tokenData);
-                            console.log(`✅ Token data collected and saved`);
+                            // Pass the full tokenData to collectAndStoreTokenData
+                            await dataCollector.collectAndStoreTokenData(tokenData);
+                            console.log(`✅ Token data collected and saved to database`);
                             scannedTokens++;
                             foundTokenInBlock = true;
                         }
@@ -77,4 +86,8 @@ export async function scanToken(chains: string[] = ['ethereum'], batchSize: numb
             console.error(`Error scanning ${chain}:`, error);
         }
     }
+    
+    // Close database connection
+    await AppDataSource.destroy();
+    console.log('✅ Database connection closed');
 } 
