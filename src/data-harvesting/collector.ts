@@ -1,68 +1,108 @@
 // path: src/data-harvesting/collector.ts
-import { TokenService } from '../db/services/TokenService';
+import { Token } from '../db/entities/Token';
+import { TokenMetrics } from '../db/entities/TokenMetrics';
+import { TokenPrice } from '../db/entities/TokenPrice';
 import { AppDataSource } from '../db/data-source';
-import { TokenData } from '../types/data';
+import { TokenData } from '../types/token';
+import { In } from 'typeorm';
 
-export class DataCollector {
-    private tokenService: TokenService;
-
-    constructor() {
-        this.tokenService = new TokenService(AppDataSource);
-    }
+class DataCollector {
+    private tokenBatch: TokenData[] = [];
+    private readonly BATCH_SIZE = 50;
+    private processingBatch = false;
 
     async collectAndStoreTokenData(tokenData: TokenData): Promise<void> {
-        try {
-            // Store base token information
-            const token = await this.tokenService.upsertToken({
-                address: tokenData.token,
-                name: tokenData.name,
-                symbol: tokenData.symbol
-            });
-
-            // Store metrics
-            await this.tokenService.saveMetrics({
-                tokenAddress: token.address,
-                volumeAnomaly: tokenData.volumeAnomaly,
-                holderConcentration: tokenData.holderConcentration,
-                liquidityScore: tokenData.liquidityScore,
-                priceVolatility: tokenData.priceVolatility,
-                sellPressure: tokenData.sellPressure,
-                marketCapRisk: tokenData.marketCapRisk,
-                bundlerActivity: tokenData.bundlerActivity,
-                accumulationRate: tokenData.accumulationRate,
-                stealthAccumulation: tokenData.stealthAccumulation,
-                suspiciousPattern: tokenData.suspiciousPattern,
-                isRugPull: tokenData.isRugPull,
-                metadata: tokenData.metadata
-            });
-
-            // Store current price data
-            await this.tokenService.savePrice({
-                tokenAddress: token.address,
-                price: tokenData.currentPrice || 0,
-                volume24h: tokenData.volume24h || 0,
-                marketCap: tokenData.marketCap || 0,
-                liquidity: tokenData.liquidity || 0
-            });
-
-            console.log(`Successfully stored data for token ${tokenData.token}`);
-        } catch (error) {
-            console.error(`Error collecting data for token ${tokenData.token}:`, error);
-            throw error;
+        this.tokenBatch.push(tokenData);
+        
+        if (this.tokenBatch.length >= this.BATCH_SIZE && !this.processingBatch) {
+            await this.processBatch();
         }
     }
 
-    async collectBatchTokenData(tokenDataArray: TokenData[]): Promise<void> {
-        for (const tokenData of tokenDataArray) {
-            try {
-                await this.collectAndStoreTokenData(tokenData);
-            } catch (error) {
-                console.error(`Failed to collect data for token ${tokenData.token}:`, error);
-                continue;
+    private async processBatch(): Promise<void> {
+        if (this.processingBatch || this.tokenBatch.length === 0) return;
+        
+        this.processingBatch = true;
+        const batchToProcess = [...this.tokenBatch];
+        this.tokenBatch = [];
+
+        const queryRunner = AppDataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            // Process tokens in bulk
+            const tokenRepository = queryRunner.manager.getRepository(Token);
+            const tokenAddresses = batchToProcess.map(data => data.address);
+            
+            // Check existing tokens
+            const existingTokens = await tokenRepository.find({
+                where: { address: In(tokenAddresses) }
+            });
+            const existingAddresses = new Set(existingTokens.map(t => t.address));
+            
+            // Prepare new tokens
+            const newTokens = batchToProcess
+                .filter(data => !existingAddresses.has(data.address))
+                .map(data => tokenRepository.create({
+                    address: data.address,
+                    name: data.name,
+                    symbol: data.symbol
+                }));
+
+            if (newTokens.length > 0) {
+                await tokenRepository.save(newTokens);
             }
+
+            // Process metrics in bulk
+            const metricsRepository = queryRunner.manager.getRepository(TokenMetrics);
+            const metricsEntities = batchToProcess.map(data => 
+                metricsRepository.create({
+                    tokenAddress: data.address,
+                    volumeAnomaly: data.metrics.volumeAnomaly,
+                    holderConcentration: data.metrics.holderConcentration,
+                    liquidityScore: data.metrics.liquidityScore,
+                    priceVolatility: data.metrics.priceVolatility,
+                    sellPressure: data.metrics.sellPressure,
+                    marketCapRisk: data.metrics.marketCapRisk,
+                    isRugPull: data.metrics.isRugPull,
+                    metadata: data.metrics.metadata
+                })
+            );
+            await metricsRepository.save(metricsEntities);
+
+            // Process prices in bulk
+            const priceRepository = queryRunner.manager.getRepository(TokenPrice);
+            const priceEntities = batchToProcess.map(data =>
+                priceRepository.create({
+                    tokenAddress: data.address,
+                    price: data.price.price,
+                    volume24h: data.price.volume24h,
+                    marketCap: data.price.marketCap,
+                    liquidity: data.price.liquidity
+                })
+            );
+            await priceRepository.save(priceEntities);
+
+            await queryRunner.commitTransaction();
+            console.log(`✅ Successfully processed batch of ${batchToProcess.length} tokens`);
+        } catch (error) {
+            console.error('Error processing batch:', error);
+            await queryRunner.rollbackTransaction();
+            
+            // Requeue failed items
+            this.tokenBatch = [...this.tokenBatch, ...batchToProcess];
+        } finally {
+            this.processingBatch = false;
+            await queryRunner.release();
+        }
+    }
+
+    async flushRemaining(): Promise<void> {
+        if (this.tokenBatch.length > 0) {
+            await this.processBatch();
         }
     }
 }
 
-// Export a singleton instance
 export const dataCollector = new DataCollector(); 

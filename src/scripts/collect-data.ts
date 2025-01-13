@@ -1,61 +1,122 @@
-import { initializeDatabase } from '../db/data-source';
-import { dataCollector } from '../data-harvesting/collector';
 import { fetchTokenData } from '../data-harvesting/fetcher';
-import { TokenData } from '../types/data';
+import { dataCollector } from '../data-harvesting/collector';
+import { AppDataSource } from '../db/data-source';
+import { TokenData } from '../types/token';
+import * as fs from 'fs';
+import * as path from 'path';
 
-// List of tokens to monitor (example tokens)
-const TOKENS_TO_MONITOR = [
-    // Stablecoins
-    '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT
-    '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
-    '0x6B175474E89094C44Da98b954EedeAC495271d0F', // DAI
-    
-    // Major DeFi tokens
-    '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', // UNI
-    '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', // AAVE
-    '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2', // MKR
-    
-    // Layer 2 tokens
-    '0x4200000000000000000000000000000000000042', // OP
-    '0x85F17Cf997934a597031b2E18a9aB6ebD4B9f6a4', // NEAR
-    
-    // Meme tokens (for comparison)
-    '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE', // SHIB
-    '0x6982508145454Ce325dDbE47a25d4ec3d2311933', // PEPE
-];
-
-async function main() {
+async function processTrainingData(filePath: string): Promise<void> {
     try {
-        // Initialize database connection
-        await initializeDatabase();
-        console.log('Database initialized');
-
-        // Collect data for each token
-        console.log('Starting data collection...');
+        const rawData = fs.readFileSync(filePath, 'utf8');
+        const rawTrainingData = JSON.parse(rawData);
         
-        // Fetch token data for each address
-        const tokenDataArray: TokenData[] = [];
-        for (const address of TOKENS_TO_MONITOR) {
+        // Map the data to match our TokenData interface
+        const trainingData: TokenData[] = rawTrainingData.map((data: any) => ({
+            address: data.token, // Map token field to address
+            name: data.name,
+            symbol: data.symbol,
+            metrics: {
+                volumeAnomaly: data.volumeAnomaly ?? 0,
+                holderConcentration: data.holderConcentration ?? 0,
+                liquidityScore: data.liquidityScore ?? 0,
+                priceVolatility: data.priceVolatility ?? 0,
+                sellPressure: data.sellPressure ?? 0,
+                marketCapRisk: data.marketCapRisk ?? 0,
+                isRugPull: data.isRugPull ?? false,
+                bundlerActivity: data.bundlerActivity ?? false,
+                accumulationRate: data.accumulationRate ?? 0,
+                stealthAccumulation: data.stealthAccumulation ?? 0,
+                suspiciousPattern: data.suspiciousPattern, // This can be null
+                metadata: data.metadata ?? {}
+            },
+            price: {
+                price: 0, // These fields aren't in training data
+                volume24h: 0,
+                marketCap: 0,
+                liquidity: 0
+            }
+        }));
+        
+        console.log(`Found ${trainingData.length} tokens in training data`);
+        
+        for (const tokenData of trainingData) {
             try {
-                const tokenData = await fetchTokenData(address, 'ethereum');
-                if (tokenData) {
-                    tokenDataArray.push(tokenData);
-                }
+                await dataCollector.collectAndStoreTokenData(tokenData);
+                console.log(`✅ Data stored for token: ${tokenData.address}`);
             } catch (error) {
-                console.error(`Failed to fetch data for token ${address}:`, error);
+                console.error(`Error processing token ${tokenData.address}:`, error);
             }
         }
         
-        // Store the collected data
-        await dataCollector.collectBatchTokenData(tokenDataArray);
-        console.log('Data collection completed');
-
-        process.exit(0);
+        // Flush any remaining data
+        await dataCollector.flushRemaining();
     } catch (error) {
-        console.error('Error in data collection:', error);
+        console.error('Error processing training data:', error);
+        throw error;
+    }
+}
+
+async function processTokens(tokenAddresses: string[]): Promise<void> {
+    const batchSize = 10;
+    const batches = [];
+
+    // Split addresses into batches
+    for (let i = 0; i < tokenAddresses.length; i += batchSize) {
+        batches.push(tokenAddresses.slice(i, i + batchSize));
+    }
+
+    // Process each batch
+    for (const batch of batches) {
+        const tokenDataPromises = batch.map(async (address) => {
+            try {
+                console.log(`Processing token: ${address}`);
+                const tokenData = await fetchTokenData(address);
+                if (tokenData) {
+                    await dataCollector.collectAndStoreTokenData(tokenData);
+                    console.log(`✅ Data collected for token: ${address}`);
+                } else {
+                    console.log(`❌ Failed to fetch data for token: ${address}`);
+                }
+            } catch (error) {
+                console.error(`Error processing token ${address}:`, error);
+            }
+        });
+
+        await Promise.all(tokenDataPromises);
+    }
+}
+
+async function main() {
+    try {
+        await AppDataSource.initialize();
+        console.log('Database connection initialized');
+
+        const trainingDataPath = path.join(__dirname, '../models/datasets/training.json');
+        
+        if (fs.existsSync(trainingDataPath)) {
+            console.log('Processing training data...');
+            await processTrainingData(trainingDataPath);
+            console.log('Training data processing completed');
+        } else {
+            console.log('Training data file not found at:', trainingDataPath);
+            console.log('Processing example tokens instead');
+            // Example token addresses to process
+            const tokenAddresses = [
+                '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984', // UNI
+                '0x514910771af9ca656af840dff83e8264ecf986ca', // LINK
+                '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9'  // AAVE
+            ];
+            await processTokens(tokenAddresses);
+        }
+
+        await AppDataSource.destroy();
+        console.log('Database connection closed');
+    } catch (error) {
+        console.error('Error:', error);
         process.exit(1);
     }
 }
 
-// Run the script
-main();
+if (require.main === module) {
+    main();
+}

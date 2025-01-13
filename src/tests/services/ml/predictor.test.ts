@@ -1,5 +1,5 @@
 import { analyzeToken } from '../../../training/modelPredictor';
-import { fetchTokenData } from '../../../services/data/fetcher';
+import { fetchTokenData } from '../../../data-harvesting/fetcher';
 import { TokenData } from '../../../types/data';
 
 // Mock the dependencies
@@ -29,7 +29,7 @@ describe('Predictor Service', () => {
         bundlerActivity: true,
         accumulationRate: 0.6,
         stealthAccumulation: 0.4,
-        suspiciousPattern: 0.7,
+        suspiciousPattern: true,
         isRugPull: true,
         metadata: {
             reason: 'Test reason'
@@ -58,7 +58,7 @@ describe('Predictor Service', () => {
             bundlerActivity: true,
             accumulationRate: 0.6,
             stealthAccumulation: 0.4,
-            suspiciousPattern: 0.7,
+            suspiciousPattern: true,
             reason: 'Test reason'
         });
     });

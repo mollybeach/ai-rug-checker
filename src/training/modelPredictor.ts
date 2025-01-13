@@ -1,63 +1,68 @@
 //path: src/training/modelPredictor.ts
 import * as tf from '@tensorflow/tfjs-node';
-import { fetchTokenData } from '../data-harvesting/fetcher';
-import { normalizeFeatures } from '../data-processing/parser';
-import { TokenData, TokenAnalysis } from '../types/data';
-import path from 'path';
+import { TokenData, BaseMetrics } from '../types/token';
 
-const MODEL_PATH = 'file://' + path.join(process.cwd(), 'models', 'trained', 'model.json');
-let model: tf.LayersModel | null = null;
+export class ModelPredictor {
+    private model: tf.LayersModel | null = null;
 
-async function loadModel() {
-    if (!model) {
+    async loadModel(modelPath: string): Promise<void> {
         try {
-            model = await tf.loadLayersModel(MODEL_PATH);
+            this.model = await tf.loadLayersModel(`file://${modelPath}`);
             console.log('Model loaded successfully');
         } catch (error) {
             console.error('Error loading model:', error);
             throw error;
         }
     }
-    return model;
-}
 
-export async function analyzeToken(tokenAddress: string, chain: string = 'ethereum'): Promise<TokenAnalysis> {
-    const model = await loadModel();
-    
-    // Fetch and process token data
-    const tokenData = await fetchTokenData(tokenAddress, chain);
-    if (!tokenData) {
-        throw new Error('Token data not found');
+    private preprocessInput(metrics: BaseMetrics): tf.Tensor {
+        const features = [
+            metrics.volumeAnomaly,
+            metrics.holderConcentration,
+            metrics.liquidityScore,
+            metrics.priceVolatility,
+            metrics.sellPressure,
+            metrics.marketCapRisk,
+            metrics.bundlerActivity ? 1 : 0,
+            metrics.accumulationRate,
+            metrics.stealthAccumulation,
+            metrics.suspiciousPattern === true ? 1 : metrics.suspiciousPattern === false ? 0 : 0.5
+        ];
+        return tf.tensor2d([features], [1, features.length]);
     }
 
-    // Prepare features for prediction
-    const features = normalizeFeatures(tokenData);
-    const inputTensor = tf.tensor2d([features], [1, 6]);
+    async predict(tokenData: TokenData): Promise<number> {
+        if (!this.model) {
+            throw new Error('Model not loaded');
+        }
 
-    try {
-        // Make prediction
-        const prediction = model.predict(inputTensor) as tf.Tensor;
-        const rugPullProbability = prediction.dataSync()[0];
+        try {
+            const baseMetrics: BaseMetrics = {
+                volumeAnomaly: tokenData.metrics.volumeAnomaly,
+                holderConcentration: tokenData.metrics.holderConcentration,
+                liquidityScore: tokenData.metrics.liquidityScore,
+                priceVolatility: tokenData.metrics.priceVolatility,
+                sellPressure: tokenData.metrics.sellPressure,
+                marketCapRisk: tokenData.metrics.marketCapRisk,
+                isRugPull: tokenData.metrics.isRugPull,
+                bundlerActivity: tokenData.metrics.bundlerActivity,
+                accumulationRate: tokenData.metrics.accumulationRate,
+                stealthAccumulation: tokenData.metrics.stealthAccumulation,
+                suspiciousPattern: tokenData.metrics.suspiciousPattern,
+                metadata: tokenData.metrics.metadata
+            };
 
-        return {
-            token: tokenAddress,
-            rugPullProbability,
-            metrics: {
-                volumeAnomaly: tokenData.volumeAnomaly,
-                holderConcentration: tokenData.holderConcentration,
-                liquidityScore: tokenData.liquidityScore,
-                priceVolatility: tokenData.priceVolatility,
-                sellPressure: tokenData.sellPressure,
-                marketCapRisk: tokenData.marketCapRisk
-            },
-            bundlerActivity: tokenData.bundlerActivity,
-            accumulationRate: tokenData.accumulationRate,
-            stealthAccumulation: tokenData.stealthAccumulation,
-            suspiciousPattern: tokenData.suspiciousPattern,
-            reason: tokenData.metadata.reason
-        };
-    } finally {
-        // Clean up tensor
-        inputTensor.dispose();
+            const input = this.preprocessInput(baseMetrics);
+            const prediction = this.model.predict(input) as tf.Tensor;
+            const score = (await prediction.data())[0];
+            
+            input.dispose();
+            prediction.dispose();
+            
+            return score;
+        } catch (error) {
+            console.error('Error making prediction:', error);
+            throw error;
+        }
     }
 } 
