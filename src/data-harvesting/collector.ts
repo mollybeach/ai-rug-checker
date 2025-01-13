@@ -59,14 +59,18 @@ class DataCollector {
             const metricsEntities = batchToProcess.map(data => 
                 metricsRepository.create({
                     tokenAddress: data.address,
-                    volumeAnomaly: data.metrics.volumeAnomaly,
-                    holderConcentration: data.metrics.holderConcentration,
-                    liquidityScore: data.metrics.liquidityScore,
-                    priceVolatility: data.metrics.priceVolatility,
-                    sellPressure: data.metrics.sellPressure,
-                    marketCapRisk: data.metrics.marketCapRisk,
-                    isRugPull: data.metrics.isRugPull,
-                    metadata: data.metrics.metadata
+                    volumeAnomaly: data.metrics.volumeAnomaly ?? 0,
+                    holderConcentration: data.metrics.holderConcentration ?? 0,
+                    liquidityScore: data.metrics.liquidityScore ?? 0,
+                    priceVolatility: data.metrics.priceVolatility ?? 0,
+                    sellPressure: data.metrics.sellPressure ?? 0,
+                    marketCapRisk: data.metrics.marketCapRisk ?? 0,
+                    isRugPull: data.metrics.isRugPull ?? false,
+                    bundlerActivity: data.metrics.bundlerActivity ?? false,
+                    accumulationRate: data.metrics.accumulationRate ?? 0,
+                    stealthAccumulation: data.metrics.stealthAccumulation ?? 0,
+                    suspiciousPattern: data.metrics.suspiciousPattern,
+                    metadata: data.metrics.metadata ?? {}
                 })
             );
             await metricsRepository.save(metricsEntities);

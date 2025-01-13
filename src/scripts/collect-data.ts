@@ -10,6 +10,8 @@ async function processTrainingData(filePath: string): Promise<void> {
         const rawData = fs.readFileSync(filePath, 'utf8');
         const rawTrainingData = JSON.parse(rawData);
         
+        console.log(`Read ${rawTrainingData.length} records from training data file`);
+        
         // Map the data to match our TokenData interface
         const trainingData: TokenData[] = rawTrainingData.map((data: any) => ({
             address: data.token, // Map token field to address
@@ -37,19 +39,32 @@ async function processTrainingData(filePath: string): Promise<void> {
             }
         }));
         
-        console.log(`Found ${trainingData.length} tokens in training data`);
+        console.log(`Mapped ${trainingData.length} tokens for processing`);
+        
+        let successCount = 0;
+        let errorCount = 0;
         
         for (const tokenData of trainingData) {
             try {
                 await dataCollector.collectAndStoreTokenData(tokenData);
                 console.log(`✅ Data stored for token: ${tokenData.address}`);
+                successCount++;
             } catch (error) {
-                console.error(`Error processing token ${tokenData.address}:`, error);
+                console.error(`❌ Error processing token ${tokenData.address}:`, error);
+                errorCount++;
             }
         }
         
         // Flush any remaining data
-        await dataCollector.flushRemaining();
+        try {
+            await dataCollector.flushRemaining();
+            console.log('\nProcessing Summary:');
+            console.log(`Successfully processed: ${successCount} tokens`);
+            console.log(`Failed to process: ${errorCount} tokens`);
+        } catch (error) {
+            console.error('Error flushing remaining data:', error);
+            throw error;
+        }
     } catch (error) {
         console.error('Error processing training data:', error);
         throw error;
@@ -94,11 +109,11 @@ async function main() {
         const trainingDataPath = path.join(__dirname, '../models/datasets/training.json');
         
         if (fs.existsSync(trainingDataPath)) {
-            console.log('Processing training data...');
+            console.log('Found training data file at:', trainingDataPath);
             await processTrainingData(trainingDataPath);
             console.log('Training data processing completed');
         } else {
-            console.log('Training data file not found at:', trainingDataPath);
+            console.error('Training data file not found at:', trainingDataPath);
             console.log('Processing example tokens instead');
             // Example token addresses to process
             const tokenAddresses = [
