@@ -16,7 +16,7 @@ async function main() {
         console.log(`Found ${tokenData.length} tokens in dataset`);
 
         if (tokenData.length > 0) {
-            // Convert TokenData to TrainingData
+            // Convert TokenData to the TrainingData
             const trainingData: TrainingData[] = tokenData.map((token: TokenData): TrainingData => ({
                 volumeAnomaly: token.volumeAnomaly,
                 holderConcentration: token.holderConcentration,
