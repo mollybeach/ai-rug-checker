@@ -2,9 +2,14 @@ import { collectTrainingData } from '../data-processing/trainingData';
 import { trainModel } from '../training/modelTrainer';
 import { TokenData, TrainingData } from '../types/data';
 import * as tf from '@tensorflow/tfjs-node';
+import { AppDataSource } from '../db/data-source';
 
 async function main() {
     try {
+        // Initialize database connection
+        await AppDataSource.initialize();
+        console.log('✅ Database connection established');
+
         // Load collected data
         console.log('\n📊 Loading collected data for training...');
         const tokenData = await collectTrainingData();
@@ -44,8 +49,15 @@ async function main() {
             sampleInput.dispose();
             prediction.dispose();
         }
+
+        // Close database connection
+        await AppDataSource.destroy();
+        console.log('✅ Database connection closed');
     } catch (error) {
         console.error('Error in training process:', error);
+        if (AppDataSource.isInitialized) {
+            await AppDataSource.destroy();
+        }
         process.exit(1);
     }
 }
