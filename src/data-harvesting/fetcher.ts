@@ -263,7 +263,7 @@ export async function fetchTokenData(tokenAddress: string, chain: string = 'ethe
             bundlerActivity: bundlerPattern.isFromBundler,
             accumulationRate: accMetrics.accumulationRate,
             stealthAccumulation: accMetrics.stealthAccumulation,
-            suspiciousPattern: bundlerPattern.timePattern,
+            suspiciousPattern: bundlerPattern.timePattern > 0.5 ? true : bundlerPattern.timePattern === 0 ? null : false,
             isRugPull,
             metadata: {
                 reason: generateReason(accMetrics, metrics)

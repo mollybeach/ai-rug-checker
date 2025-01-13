@@ -11,15 +11,23 @@ export interface BaseMetrics extends TokenMetrics {
     isRugPull: boolean;
 }
 
-export interface TokenData extends BaseMetrics {
+export interface TokenData extends TokenMetrics {
     token: string;
     name: string;
     symbol: string;
     bundlerActivity: boolean;
     accumulationRate: number;
     stealthAccumulation: number;
-    suspiciousPattern: number;
-    metadata: { reason: string };
+    suspiciousPattern: boolean | null;
+    isRugPull: boolean;
+    metadata: {
+        reason: string;
+    };
+    // Price data
+    currentPrice?: number;
+    volume24h?: number;
+    marketCap?: number;
+    liquidity?: number;
 }
 
 export interface TrainingData extends BaseMetrics {
@@ -33,7 +41,7 @@ export interface TokenAnalysis {
     bundlerActivity: boolean;
     accumulationRate: number;
     stealthAccumulation: number;
-    suspiciousPattern: number;
+    suspiciousPattern: boolean | null;
     reason: string;
 }
 

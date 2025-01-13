@@ -1,4 +1,4 @@
-import { scanNewTokens, scanMultipleChains } from '../../data-harvesting/tokenScanner';
+import { scanToken } from '../../data-harvesting/tokenScanner';
 
 async function main() {
     const args = process.argv.slice(2);
@@ -10,12 +10,12 @@ async function main() {
         switch (command) {
             case 'scan':
                 console.log(`Scanning ${chain} chain for ${limit} new tokens...`);
-                await scanNewTokens(chain, limit);
+                await scanToken([chain], limit);
                 break;
             
             case 'scan-all':
                 console.log('Scanning all major chains...');
-                await scanMultipleChains(['ethereum', 'bsc', 'polygon'], limit);
+                await scanToken(['ethereum', 'bsc', 'polygon'], limit);
                 break;
             
             default:

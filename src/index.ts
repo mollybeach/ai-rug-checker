@@ -2,8 +2,8 @@ import express, { Request, Response, RequestHandler } from 'express';
 import * as tf from '@tensorflow/tfjs-node';
 import { fetchTokenData } from './data-harvesting/fetcher';
 import { normalizeFeatures } from './data-processing/parser';
-import { loadExistingData } from './data-harvesting/collector';
-import { TokenMetrics } from './types/data';
+import { loadExistingData } from './data-processing/trainingData';
+import { TokenMetrics, TokenData } from './types/data';
 
 const app = express();
 app.use(express.json());
@@ -78,8 +78,7 @@ const analyzeToken: RequestHandler<{}, any, AnalyzeRequest> = async (req, res, n
             reason: tokenData.metadata.reason
         });
     } catch (error) {
-        console.error('Error analyzing token:', error);
-        res.status(500).json({ error: 'Error analyzing token' });
+        next(error);
     }
 };
 
@@ -88,10 +87,10 @@ const getStats: RequestHandler = async (_req, res, next) => {
     try {
         const data = await loadExistingData();
         const totalTokens = data.length;
-        const rugPulls = data.filter(t => t.isRugPull).length;
+        const rugPulls = data.filter((t: TokenData) => t.isRugPull).length;
         const legitimateTokens = totalTokens - rugPulls;
 
-        const averageMetrics = data.reduce<TokenMetrics>((acc, token) => {
+        const averageMetrics = data.reduce<TokenMetrics>((acc: TokenMetrics, token: TokenData) => {
             acc.volumeAnomaly += token.volumeAnomaly;
             acc.holderConcentration += token.holderConcentration;
             acc.liquidityScore += token.liquidityScore;

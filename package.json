@@ -12,6 +12,8 @@
         "train": "ts-node-dev --transpile-only src/scripts/train.ts",
         "collect-data": "ts-node-dev --transpile-only src/scripts/collect-data.ts",
         "clean-db": "ts-node-dev --transpile-only src/scripts/clean-db.ts",
+        "init-db": "ts-node src/scripts/init-db.ts",
+        "seed-db": "ts-node src/scripts/seed-db.ts",
         "test": "jest",
         "test:watch": "jest --watch",
         "test:coverage": "jest --coverage",
@@ -30,13 +32,17 @@
         "dotenv": "^16.3.1",
         "ethers": "^6.7.1",
         "express": "^4.18.2",
+        "pg": "^8.13.1",
+        "reflect-metadata": "^0.2.2",
         "sequelize": "^6.37.5",
-        "sqlite3": "^5.1.6"
+        "sqlite3": "^5.1.6",
+        "typeorm": "^0.3.20"
     },
     "devDependencies": {
         "@types/express": "^4.17.17",
         "@types/jest": "^29.5.5",
-        "@types/node": "^20.6.2",
+        "@types/node": "^20.17.12",
+        "@types/pg": "^8.11.10",
         "@types/supertest": "^2.0.12",
         "@typescript-eslint/eslint-plugin": "^6.7.0",
         "@typescript-eslint/parser": "^6.7.0",

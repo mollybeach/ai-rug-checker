@@ -20,14 +20,18 @@ export async function scanToken(chains: string[] = ['ethereum'], batchSize: numb
             
             let scannedTokens = 0;
             let currentBlock = latestBlock;
+            let blocksWithoutTokens = 0;
+            const MAX_BLOCKS_WITHOUT_TOKENS = 100;
             
-            while (scannedTokens < batchSize) {
+            while (scannedTokens < batchSize && blocksWithoutTokens < MAX_BLOCKS_WITHOUT_TOKENS) {
                 const block = await provider.getBlock(currentBlock);
                 if (!block || !block.transactions) {
                     currentBlock--;
+                    blocksWithoutTokens++;
                     continue;
                 }
                 
+                let foundTokenInBlock = false;
                 for (const txHash of block.transactions) {
                     if (scannedTokens >= batchSize) break;
                     
@@ -38,6 +42,9 @@ export async function scanToken(chains: string[] = ['ethereum'], batchSize: numb
                         const receipt = await provider.getTransactionReceipt(txHash);
                         if (!receipt || !receipt.contractAddress) continue;
                         
+                        // Wait a few blocks to ensure the token has some activity
+                        if (latestBlock - currentBlock < 5) continue;
+                        
                         console.log(`\n📝 Analyzing token: ${receipt.contractAddress}`);
                         const tokenData = await fetchTokenData(receipt.contractAddress, chain);
                         
@@ -45,6 +52,7 @@ export async function scanToken(chains: string[] = ['ethereum'], batchSize: numb
                             await appendTokenData(tokenData);
                             console.log(`✅ Token data collected and saved`);
                             scannedTokens++;
+                            foundTokenInBlock = true;
                         }
                     } catch (error) {
                         console.error(`Error processing transaction: ${error}`);
@@ -52,10 +60,19 @@ export async function scanToken(chains: string[] = ['ethereum'], batchSize: numb
                     }
                 }
                 
+                if (!foundTokenInBlock) {
+                    blocksWithoutTokens++;
+                } else {
+                    blocksWithoutTokens = 0;
+                }
+                
                 currentBlock--;
             }
             
             console.log(`\n✨ Completed scanning ${chain}. Found ${scannedTokens} tokens.`);
+            if (blocksWithoutTokens >= MAX_BLOCKS_WITHOUT_TOKENS) {
+                console.log(`⚠️ Stopped scanning after ${MAX_BLOCKS_WITHOUT_TOKENS} blocks without finding new tokens.`);
+            }
         } catch (error) {
             console.error(`Error scanning ${chain}:`, error);
         }

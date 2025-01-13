@@ -1,34 +1,12 @@
 import express from 'express';
-import config from '../config/default';
-import { initializeDatabase } from '../db/connection';
-import tokensRouter from './routes/tokens';
-import metricsRouter from './routes/metrics';
-import * as tf from '@tensorflow/tfjs-node';
-import path from 'path';
-import trainingRoutes from './routes/training';
+import { initializeDatabase } from '../db/data-source';
+import tokenRoutes from './routes/tokenRoutes';
 
 const app = express();
-let model: tf.LayersModel | null = null;
-
-// Load the model at startup
-async function loadModel() {
-    try {
-        const modelPath = 'file://' + path.join(process.cwd(), 'src/ml/models/trained/model.json');
-        model = await tf.loadLayersModel(modelPath);
-        console.log('Model loaded successfully');
-    } catch (error) {
-        console.error('Error loading model:', error);
-        process.exit(1);
-    }
-}
-
-// Middleware
 app.use(express.json());
 
-// Routes
-app.use('/tokens', tokensRouter);
-app.use('/metrics', metricsRouter);
-app.use('/api/training', trainingRoutes);
+// Use token routes
+app.use('/api/tokens', tokenRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -36,19 +14,17 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
     res.status(500).json({ error: 'Something broke!' });
 });
 
-// Start server
+const PORT = process.env.PORT || 3000;
+
 async function startServer() {
     try {
-        // Initialize database
+        // Initialize database connection
         await initializeDatabase();
-        
-        // Load model
-        await loadModel();
-        
-        // Start listening
-        const { port, host } = config.server;
-        app.listen(port, () => {
-            console.log(`Server running at http://${host}:${port}`);
+        console.log('Database connection initialized');
+
+        // Start the server
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
         });
     } catch (error) {
         console.error('Failed to start server:', error);
